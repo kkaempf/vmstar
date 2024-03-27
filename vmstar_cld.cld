@@ -1,0 +1,66 @@
+	Module		VMSTAR_CLITABLES
+	Ident		"01-005"
+!+
+!
+!  VMSTAR_CLITABLES
+!
+!  Written by:		Hunter Goatley <goathunter@WKUVX1.WKU.EDU>
+!			April 28, 1994
+!
+!  Modified by:
+!
+!	01-006		Patrick Young		02-OCT-2001 11:37
+!		Added /ODS2
+!	01-005		Richard Levitte		18-OCT-1994 09:54 CET
+!		Added /FORCE and /PADDING
+!	01-004		Richard Levitte		 1-SEP-1994 23:22 CET
+!		Changed /DATE_POLICY to not be default.
+!	01-003		Richard Levitte		 1-SEP-1994 22:58 CET
+!		Changed DATE_POLICY qualifier to have the values
+!		NONE, CREATION, MODIFICATION, ALL.
+!	01-002		Richard Levitte		 1-SEP-1994 12:04 CET
+!		Added the DATE_POLICY qualifier with the values
+!		CREATION and MODIFICATION.
+!	01-001		Richard Levitte		 1-JUL-1994 00:27 CET
+!		Added the HELP qualifier.
+!	01-000		Hunter Goatley		28-APR-1994 06:52
+!		Original version.
+!
+!-
+Define	Type		DATE_POLICY_KEYWORDS
+	Keyword		NONE, NonNegatable
+	Keyword		CREATION, Negatable
+	Keyword		MODIFICATION, Negatable
+	Keyword		ALL, Negatable, Default
+
+Define	Verb		VMSTAR
+	Parameter	P1, Label=TARFILE, Prompt="TAR file"
+	Parameter	P2, Label=INFILE, VALUE(LIST), Prompt="Files to TAR"
+	Parameter	P3, Label=DUMMY, Prompt=""
+	Qualifier	EXTRACT, NonNegatable
+	Qualifier	HELP, NonNegatable
+	Qualifier	LIST, NonNegatable
+	Qualifier	CREATE, NonNegatable
+	Qualifier	VERBOSE, NonNegatable
+	Qualifier	CONFIRM, NonNegatable
+	Qualifier	BINARY, NonNegatable
+	Qualifier	AUTOMATIC, NonNegatable
+	Qualifier	DOTS, NonNegatable
+	Qualifier	ODS2, Negatable
+	Qualifier	DATE_POLICY, Value(List, Type=DATE_POLICY_KEYWORDS),
+			NonNegatable
+	Qualifier	FORCE, Negatable
+	Qualifier	PADDING, Negatable, Default
+	Qualifier	BLOCK_FACTOR, Value(Type=$NUMBER, Required),
+			NonNegatable
+	Qualifier	YYZ, NonNegatable, Default
+	Disallow	CREATE and (EXTRACT or LIST or AUTOMATIC or BINARY
+						or ODS2)
+	Disallow	AUTOMATIC and BINARY
+	Disallow	LIST and (CREATE or EXTRACT or BINARY or AUTOMATIC
+			or DOTS or CONFIRM or FORCE or PADDING or ODS2)
+	Disallow	DATE_POLICY.ALL and (DATE_POLICY.NONE
+						or DATE_POLICY.CREATION
+						or DATE_POLICY.MODIFICATION) or
+			DATE_POLICY.NONE and (DATE_POLICY.CREATION
+						or DATE_POLICY.MODIFICATION)
