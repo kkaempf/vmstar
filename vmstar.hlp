@@ -1,0 +1,257 @@
+1 VMSTAR
+2 DESCRIPTION
+ VMSTAR is a VMS implementation of a utility for reading Unix tar
+ files on disk  or tape.   The present version  is not,  however,
+ capable of *writing* tar files.
+
+ Tar provides  a mechanism  for  transporting entire  file  trees
+ between Unix  systems,  preserving the  directory  organization,
+ filenames, and file  time stamps.  Maintenance  of correct  time
+ stamps is particularly  important for  software maintainers  who
+ manage software projects on multiple machines.
+
+ A tar file is  a binary file  containing 10240-byte blocks,  and
+ can be transferred on magnetic  tape, or in "binary" or  "image"
+ mode (BUT, use  "tenex" mode  for TOPS-20 systems)  with FTP  or
+ Kermit.  When it finally  reaches a VMS system,  it must have  a
+ fixed-length 512-byte binary record organization if it is to  be
+ handled correctly by VMSTAR.
+
+ Unix makes no  distinction between  binary and  text files;  all
+ files follow a model  of a simple  unstructured stream of  8-bit
+ bytes which terminate at the  last byte written.  Any file  size
+ of 0 to 4G bytes is permitted by the Unix file system.  Filename
+ lengths vary between  different versions  of Unix.   Originally,
+ filenames were  limited to  14  characters, with  an  indefinite
+ limit on the  full file pathname.   Recent versions of  Berkeley
+ Unix (4.3) permit up to 256  characters in a filename, and  1024
+ characters in the full pathname.  Tar is intermediate; it allows
+ 100 characters in the  pathname recorded on  the tape, which  is
+ usually a relative, rather than absolute, pathname.
+
+ Unix filenames may contain any printable ASCII character  except
+ slash, which  is  reserved for  use  as a  directory  separator.
+ Actually, many Unix systems will also permit control  characters
+ 1..31 (NUL is excluded because of its use as a string terminator
+ in the C  programming language  in which Unix  is written),  and
+ some even  allow  characters  128..255.  However,  such  use  is
+ uncommon.  An unusual  feature of  Unix is that  letter case  is
+ *significant*.  VMSTAR  translates  the most  frequent  uses  of
+ special characters,  but  will  not  handle  control  characters
+ automatically (its substitution file  option can deal with  this
+ problem).  Name collisions occasioned by the collapse of  letter
+ case  (e.g.   Makefile  and  makefile)  will  simply  result  in
+ multiple file generations, and must be dealt with manually.
+
+ VMS has a record structured file system, with firm  distinctions
+ between fixed, stream, and variable length records, and  between
+ text and binary files.  This poses a problem for importing files
+ from a  system  which  does not  distinguish  between  text  and
+ binary.  VMSTAR makes the reasonable assumption that most  files
+ that can be usefully imported from a Unix system are text files,
+ and writes them by default as
+
+ File organization:  Sequential
+ Record format:      Variable length
+ Record attributes:  Carriage return carriage control
+
+ This is the organization used  by the majority of VMS  utilities
+ and languages, and is what you get if you COPY from the terminal
+ into a  disk  file.  The  VMS  DCL command  DIRECTORY/FULL  will
+ display file attributes such as these.
+
+ VMSTAR also permits selection of stream format output, which was
+ added to VMS with Version 4,  and is the default format used  by
+ programs written in  the C language.   Variable length  carriage
+ return carriage  control files  are stored  as a  2-byte  length
+ field  followed  by  a  text  line,  with  no  embedded  CR   LF
+ characters.  Stream files are stored as literal text  characters
+ with no preceding length  field, and are  terminated by LF  (the
+ default for C), or CR LF (Stream_CRLF format), or CR  (Stream_CR
+ format).  Unfortunately, not all VMS utilities are able to  cope
+ correctly with stream format files, so VMSTAR by default  sticks
+ to variable format files.
+
+ Binary file output may be selected by an option when it is known
+ that the tar  file contains binary  data (e.g. TeX  font or  DVI
+ files).  The  problem  this  introduces is  that  VMS  does  not
+ maintain a single byte count; it stores instead a block count, a
+ block size, and a  byte offset into the  last block.  While  the
+ correct byte count can be determined from these numbers, few VMS
+ utilities do so for  binary files; they  simply assume the  last
+ block is filled, making  the file size a  multiple of the  block
+ size (512  bytes).   This  introduces the  need  for  a  padding
+ character to fill  up the last  block.  Conventionally, this  is
+ NUL, and is the default for  VMSTAR; however, it is possible  to
+ specify other choices by a run-time option.
+
+ The last problem that will be noted here is the concept of time.
+ Most modern operating systems are  based on some universal  time
+ standard, such as Greenwich Mean Time (GMT).  VMS, alas, is not,
+ and knows only about local time.   Unix tar files record a  time
+ stamp expressed  as  the  number of  seconds  since  01-Jan-1970
+ 00:00:00 GMT.   In  the hope  that  VMS will  soon  remedy  this
+ serious defect, VMSTAR does not attempt to deal with the problem
+ by  introducing  its  own  implementation  of  time   conversion
+ utilities.  Instead, the source  code contains a constant  which
+ must be set  at compile  time.  For Mountain  Daylight Time,  or
+ Central Standard Time, this is
+
+ #define SECONDS_WEST_OF_GREENWICH (6L*60L*60L)
+
+ This still does  not completely solve  the problem, because  the
+ file time stamps  will be  biased by the  specified offset,  but
+ that offset if correct only during the half of the year in which
+ either daylight or  standard time  is in  effect.  Dealing  with
+ this properly requires centralized code in the operating  system
+ which can account  for the peculiar  vagaries of daylight  time,
+ which is subject to  frequent legislative revision, varies  from
+ country to country, and indeed, even within countries (at  least
+ two US states use standard time year round).  Consequently,  the
+ best one can hope for with  VMSTAR is that the file time  stamps
+ will be correct within one hour.
+
+2 OPTIONS
+ VMSTAR adheres to  the peculiar  command line  option syntax  of
+ Unix tar, which is at variance  with the vast majority of  other
+ Unix software.  In  order to deal  with the differences  between
+ filenames and file formats between the two systems, VMSTAR has 3
+ additional options.  The  options must  be written  as a  single
+ command  line  argument,  with   no  embedded  spaces,  and   no
+ conventional leading dash (Unix) or slash (VMS).
+
+ In order to accept command-line options, VMSTAR must be declared
+ as a foreign command symbol.  This should preferably be done  by
+ the system manager in a system-wide startup file:
+
+ $ VMSTAR :== $SYS$SYSTEM:VMSTAR.EXE
+
+ The  option  syntax  is  as  follows.   Square  brackets  denote
+ options, and [bsv] means one of b, s, or v.  Angle brackets  are
+ part of  the  required syntax,  and  are necessary  to  separate
+ values from following option letters.  In the interests of  ease
+ of use on VMS (which  by default upper-cases the command  line),
+ letter case is *not* significant
+
+ vmstar [n][tx][m=<[bsv]>][p=<xx>][s=<subfile>][v][f tarfile]
+
+ n = Suppress dynamic file mode change
+
+ t = Type directory of tarfile, x = eXtract files to disk
+
+ m = output file Mode
+         b = Binary, s = Stream, v = Variable
+
+ p = Padding character for last block of binary files
+         xx = hexadecimal value of padding character
+
+ s = Unix filename Substitution file
+         <subfile> = file specification in <>
+         Subfile contains lines with oldname newname pairs
+         separated by whitespace
+
+ v = Verbose output
+
+ f = input File
+         tarfile = file specification as next argument
+
+ Defaults: tar m=<v>p=<0>xvf tape
+
+ Common idioms are "tar  tvf foo.tar" to type  the contents of  a
+ tar file, and "tar  xvf foo.tar" to  extract the contents.   The
+ "c" (create) option  of Unix  tar is not  yet supported;  VMSTAR
+ cannot write tar files.
+
+ m=<[bvs]>       Output file mode; the  single letter value is  b
+                 (fixed Binary), v (Variable text), or s  (Stream
+                 text).  If  m=<v> or  m=<s>, and  any  character
+                 with  the 8-th bit set is  detected in the first
+                 512 bytes, the mode will be temporarily switched
+                 to fixed binary, unless the   n option has  been
+                 specified   to    suppress  this  action.   This
+                 heuristic    is  often,     though  not  always,
+                 successful in dealing with a tar file containing
+                 mixed text and binary files.
+
+                 The  default  is  m=<v>,  corresponding  to  the
+                 standard VMS text file format.
+
+ p=<hexval>      Output fixed binary file padding character.  VMS
+                 requires fixed-block binary files to be an exact
+                 multiple of 512 bytes in length; the hexadecimal
+                 value specifies the  padding character.  To  pad
+                 with the letter "A" (dec 65, hex 41), one  could
+                 specify p=<41>.
+
+                 The default is p=<0>.
+
+ s=<subfile>     Unix  filename  substitution   file;  the   file
+                 contains pairs  of  oldname  newname,  separated
+                 (and   possibly   preceded   or   followed)   by
+                 whitespace (blank or tab).  For example,
+
+                 cmr10.300pk 300/cmr10.pk
+
+                 would map  the file  "cmr10.300pk" into  a  file
+                 "cmr10.pk" in a subdirectory "300".
+
+                 The default is no substitution file.
+
+ Here is a full-blown sample invocation:
+
+         $ tar xvm=<s>s=<foo.sub>p=<ff>f foo.sub
+
+ Invoking tar without  any options  (or with  invalid ones)  will
+ result in a usage display, in case you forget them.
+
+2 AUTHORS
+ Copyright 1986
+ Sid Penstone
+ Department of Electrical Engineering
+ Queen's University
+ Kingston, Ontario
+ CANADA K7L3N6
+ Tel: (613) 545-5925
+
+ Bitnet: Penstone@qucdnee1  (Preferred) or Penstone@qucdn
+
+ Changes for versions 2.4 (file time stamp preservation, f, m, s,
+ and p options,  usage   message, general cleanup, ignore  option
+ letter case), 2.6 (filename character  set translation), and 2.7
+ (n option and revised usage message):
+ Nelson H.F. Beebe
+ Center for Scientific Computing
+ and Department of Mathematics
+ South Physics Building
+ University of Utah
+ Salt Lake City, UT 84112
+ USA
+ Tel: (801) 581-5254
+
+ Internet e-mail: Beebe@science.utah.edu
+
+ Changes for version 2.5 (VAX VMS 5.x port):
+ Michel Debar
+ Centre de Calcul
+ Facultes Univeritaires de Notre-Dame de la Paix (FUNDP)
+ Rue Grandgagnage, 21
+ B-5000 Namur
+ BELGIUM
+
+2 BUGS
+ The handling of file time stamps, and the necessity of  revising
+ the program  twice a  year to  set the  local time  offset,  are
+ definite flaws.  The fix, however, belongs in the VMS  operating
+ system, not in user programs.
+
+ It would  be  nice to  support  a generalized  pattern  matching
+ facility in the  font substitution  file, in the  manner of  the
+ Unix sed  utility.  For  the time  being, this  must be  handled
+ manually by using the "t" option to get a tar file listing, then
+ editing it into  a form  with the changes,  and finally  running
+ VMSTAR with the "x" option:
+
+ $ define/user sys$output foo.sub
+ $ vmstar tvf foo.tar
+ $ edit foo.sub
+ $ vmstar xvs=<foo.sub>f foo.tar

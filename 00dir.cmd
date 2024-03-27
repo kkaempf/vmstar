@@ -1,0 +1,14 @@
+get 00dir.cmd
+get 00dir.html
+get 00dir.lst
+get 00tdir.cmd
+get 00tdir.html
+get 00tdir.lst
+get build-vmstar.com
+get index
+get index.html
+get makefile
+get utime.c
+get vmstar.c
+get vmstar.exe
+get vmstar.hlp
