@@ -1,8 +1,8 @@
 # DESCRIP.MMS
 #
-#    VMSTAR 4.1 - MMS (or MMK) Description File.
+#    VMSTAR 4.4 - MMS (or MMK) Description File.
 #
-#    Last revised:  2014-11-24
+#    Last revised:  2022-06-22
 #
 # Usage:
 #
@@ -10,8 +10,16 @@
 #
 # Optional macros:
 #
+#    ARCH=arch_name  Do not determine host hardware architecture
+#                    automatically.  Use arch_name (ALPHA, IA64, VAX,
+#                   or X86_64), instead.
+#
 #    "CCOPTS=xxx"   Compile with CC options xxx.  For example:
 #                   "CCOPTS=/ARCH=HOST"
+#
+#    COM1=dcl_scr   Execute DCL script dcl_scr in the .FIRST rule.
+#                   For example, to use VSI x86-64 Cross-tools on IA64:
+#                   COM1=SYS$MANAGER:X86_XTOOLS$SYLOGIN.COM
 #
 #    DBG=1          Compile /DEBUG /NOOPTIMIZE.  Link /DEBUG /TRACEBACK.
 #    TRC=1          Default is /NOTRACEBACK, but TRC=1 enables link with
@@ -103,6 +111,9 @@ VMSTAR_HLP = VMSTAR.HLP
 # Default target, ALL.  Build all executables and help files.
 
 ALL : $(VMSTAR_EXE) $(VMSTAR_HLP)
+	@ write sys$output ""
+	@ show time
+	@ write sys$output ""
 	@ write sys$output "Done."
 
 # CLEAN target.  Delete the [.$(DEST)] directory and everything in it.
@@ -141,6 +152,12 @@ CLEAN_ALL :
 	 set protection = w:d VAX*.dir;*
 	if (f$search( "VAX*.dir", 2) .nes. "") then -
 	 delete VAX*.dir;*
+	if (f$search( "[.X86_64*]*.*") .nes. "") then -
+	 delete [.X86_64*]*.*;*
+	if (f$search( "X86_64*.dir", 1) .nes. "") then -
+	 set protection = w:d X86_64*.dir;*
+	if (f$search( "X86_64*.dir", 2) .nes. "") then -
+	 delete X86_64*.dir;*
 	if (f$search( "*.MMSD") .nes. "") then -
 	 delete *.MMSD;*
 	if (f$search( "$(VMSTAR_HLP)") .nes. "") then -

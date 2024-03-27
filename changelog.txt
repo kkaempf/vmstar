@@ -1,3 +1,9 @@
+Wed Jun 28 2022  Steven Schweda <sms@antinode.info>
+
+        * V4.4.  Changed builders to accommodate x86_64 hardware
+          architecture.  (BUILD_VMSTAR.COM, DESCRIP.MMS,
+          DESCRIP_SRC.MMS) 
+
 Tue Dec 29 2020  Steven Schweda <sms@antinode.info>
 
         * V4.3.  Minor documentation fixes.  (AAAREADME.TXT)

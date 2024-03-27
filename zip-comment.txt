@@ -1,5 +1,5 @@
 
-VMSTAR V4.3 -- Source kit.  2020-12-29.
+VMSTAR V4.4 -- Source kit.  2022-06-28.
 
 See enclosed file AAAREADME.TXT.
 

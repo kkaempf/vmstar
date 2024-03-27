@@ -2,12 +2,13 @@ $! BUILD_VMSTAR.COM
 $!
 $!     Build procedure for VMSTAR.
 $!
-$!     Last revised:  2014-11-24  SMS.
+$!     Last revised:  2022-06-22  SMS.
 $!
 $!     Command arguments:
 $!     - Suppress C compilation (re-link): "NOCOMPILE"
 $!     - Suppress linking executables: "NOLINK"
 $!     - Suppress help file processing: "NOHELP"
+$!     - Specify hardware architecture manually: "ARCH=<hw_arch>"
 $!     - Select compiler environment: "VAXC", "DECC"
 $!     - Enable large-file (>2GB) support: "LARGE"
 $!       Disable large-file (>2GB) support: "NOLARGE"
@@ -66,7 +67,9 @@ $ endif
 $!
 $!##################### Customizing section #############################
 $!
+$ ARCH = ""
 $ CCOPTS = ""
+$ CCOPTS_INT = ""
 $ DASHV = 0
 $ LINKOPTS = "/notraceback"
 $ LISTING = " /nolist"
@@ -84,6 +87,14 @@ $ argloop:
 $     current_arg_name = "P''arg_cnt'"
 $     curr_arg = f$edit( 'current_arg_name', "UPCASE")
 $     if (curr_arg .eqs. "") then goto argloop_out
+$!
+$     if (f$extract( 0, 4, curr_arg) .eqs. "ARCH")
+$     then
+$         opts = f$edit( curr_arg, "COLLAPSE")
+$         eq = f$locate( "=", opts)
+$         ARCH = f$edit( f$extract( (eq+ 1), 1000, opts), "UPCASE")
+$         goto argloop_end
+$     endif
 $!
 $     if (f$extract( 0, 5, curr_arg) .eqs. "CCOPT")
 $     then
@@ -176,21 +187,20 @@ $!
 $ workdir = f$environment( "default")
 $ here = f$parse( workdir, , , "device")+ f$parse( workdir, , , "directory")
 $!
-$! Sense the host architecture (Alpha, Itanium, or VAX).
+$! Sense the host architecture (Alpha, Itanium, VAX, or x86_64).
 $!
-$ if (f$getsyi( "HW_MODEL") .lt. 1024)
+$ if (ARCH .eqs. "")
 $ then
-$     arch = "VAX"
-$ else
-$     if (f$getsyi( "ARCH_TYPE") .eq. 2)
+$     if (f$getsyi( "HW_MODEL") .gt. 0) .and. -
+       (f$getsyi( "HW_MODEL") .lt. 1024)
 $     then
-$         arch = "ALPHA"
+$         arch = "VAX"
 $     else
-$         if (f$getsyi( "ARCH_TYPE") .eq. 3)
+$         if (f$getsyi( "ARCH_TYPE") .eq. 2)
 $         then
-$             arch = "IA64"
+$             arch = "ALPHA"
 $         else
-$             arch = "unknown_arch"
+$             arch = f$edit( f$getsyi( "ARCH_NAME"), "UPCASE")
 $         endif
 $     endif
 $ endif
@@ -210,7 +220,7 @@ $         say "You must use DEC/Compaq/HP C to build VMSTAR."
 $         goto error
 $     endif
 $!
-$     cc = "cc /prefix = all"
+$     CCOPTS_INT = "/prefix = all"
 $     defs = "''LOCAL_VMSTAR'"
 $     if (LARGE_FILE .ge. 0)
 $     then
@@ -229,7 +239,7 @@ $     if (HAVE_DECC_VAX .and. MAY_USE_DECC)
 $     then
 $         ! We use DECC:
 $         USE_DECC_VAX = 1
-$         cc = "cc /decc /prefix = all"
+$         CCOPTS_INT = "/decc /prefix = all"
 $         defs = "''LOCAL_VMSTAR'"
 $     else
 $         ! We use VAXC:
@@ -237,9 +247,7 @@ $         USE_DECC_VAX = 0
 $         defs = "''LOCAL_VMSTAR'"
 $         if (HAVE_DECC_VAX)
 $         then
-$             cc = "cc /vaxc"
-$         else
-$             cc = "cc"
+$             CCOPTS_INT = "/vaxc"
 $         endif
 $         dest = "''dest'V"
 $         cmpl = "VAC C"
@@ -328,7 +336,12 @@ $     endif
 $!
 $! Define compiler command.
 $!
-$     cc = cc+ " "+ LISTING+ CCOPTS
+$     if (f$type( CC) .eqs. "")
+$     then
+$         cc = "cc"
+$     endif
+$!
+$     cc = cc+ " "+ CCOPTS_INT+ LISTING+ CCOPTS
 $!
 $ endif
 $!

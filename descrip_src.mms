@@ -1,8 +1,8 @@
 # DESCRIP_SRC.MMS
 #
-#    VMSTAR 4.3 - MMS (or MMK) Source Description File.
+#    VMSTAR 4.4 - MMS (or MMK) Source Description File.
 #
-#    Last revised:  2020-12-23
+#    Last revised:  2022-06-28
 #
 
 # This description file is included by other description files.  It is
@@ -17,23 +17,40 @@ $$$$ THIS DESCRIPTION FILE IS NOT INTENDED TO BE USED THIS WAY.
 # "ident" (version, line 2).
 .INCLUDE version.opt
 
-# Define MMK architecture macros when using MMS.
+# Define old MMK architecture macros when using MMS.
 
-.IFDEF __MMK__                  # __MMK__
-.ELSE                           # __MMK__
+.IFDEF MMS$ARCH_NAME            # MMS$ARCH_NAME
 ALPHA_X_ALPHA = 1
 IA64_X_IA64 = 1
 VAX_X_VAX = 1
-.IFDEF $(MMS$ARCH_NAME)_X_ALPHA     # $(MMS$ARCH_NAME)_X_ALPHA
+X86_64_X_X86_64 = 1
+.IFDEF ARCH                         # ARCH
+ARCH_NAME = $(ARCH)
+.ELSE                               # ARCH
+ARCH_NAME = $(MMS$ARCH_NAME)
+.ENDIF                              # ARCH
+.IFDEF $(ARCH_NAME)_X_ALPHA         # $(ARCH_NAME)_X_ALPHA
 __ALPHA__ = 1
-.ENDIF                              # $(MMS$ARCH_NAME)_X_ALPHA
-.IFDEF $(MMS$ARCH_NAME)_X_IA64      # $(MMS$ARCH_NAME)_X_IA64
+.ENDIF                              # $(ARCH_NAME)_X_ALPHA
+.IFDEF $(ARCH_NAME)_X_IA64          # $(ARCH_NAME)_X_IA64
 __IA64__ = 1
-.ENDIF                              # $(MMS$ARCH_NAME)_X_IA64
-.IFDEF $(MMS$ARCH_NAME)_X_VAX       # $(MMS$ARCH_NAME)_X_VAX
+.ENDIF                              # $(ARCH_NAME)_X_IA64
+.IFDEF $(ARCH_NAME)_X_VAX           # $(ARCH_NAME)_X_VAX
 __VAX__ = 1
-.ENDIF                              # $(MMS$ARCH_NAME)_X_VAX
-.ENDIF                          # __MMK__
+.ENDIF                              # $(ARCH_NAME)_X_VAX
+.IFDEF $(ARCH_NAME)_X_X86_64        # $(ARCH_NAME)_X_X86_64
+__X86_64__ = 1
+.ENDIF                              # $(ARCH_NAME)_X_X86_64
+.ELSE                           # MMS$ARCH_NAME
+.IFDEF __MMK__                      # __MMK__
+.IFDEF ARCH                             # ARCH
+.IFDEF __$(ARCH)__                          # __$(ARCH)__
+.ELSE                                       # __$(ARCH)__
+__$(ARCH)__ = 1
+.ENDIF                                      # __$(ARCH)__                      
+.ENDIF                                  # ARCH
+.ENDIF                              # __MMK__
+.ENDIF                          # MMS$ARCH_NAME
 
 # Combine command-line VAX C compiler macros.
 
@@ -46,28 +63,34 @@ VAXC_OR_FORCE_VAXC = 1
 .ENDIF                          # VAXC
 
 # Analyze architecture-related and option macros.
-
-.IFDEF __ALPHA__                # __ALPHA__
+# (Sense x86_64 before IA64 for old MMK and/or x86_64 cross tools.)
+                                
+.IFDEF __X86_64__               # __X86_64__
 DECC = 1
-DESTM = ALPHA
-.ELSE                           # __ALPHA__
+DESTM = X86_64
+.ELSE                           # __X86_64__
 .IFDEF __IA64__                     # __IA64__
 DECC = 1
 DESTM = IA64
 .ELSE                               # __IA64__
-.IFDEF __VAX__                          # __VAX__
-.IFDEF VAXC_OR_FORCE_VAXC                   # VAXC_OR_FORCE_VAXC
+.IFDEF __ALPHA__                        # __ALPHA__
+DECC = 1
+DESTM = ALPHA
+.ELSE                                   # __ALPHA__
+.IFDEF __VAX__                              # __VAX__
+.IFDEF VAXC_OR_FORCE_VAXC                       # VAXC_OR_FORCE_VAXC
 DESTM = VAXV
-.ELSE                                       # VAXC_OR_FORCE_VAXC
+.ELSE                                           # VAXC_OR_FORCE_VAXC
 DECC = 1
 DESTM = VAX
-.ENDIF                                      # VAXC_OR_FORCE_VAXC
-.ELSE                                   # __VAX__
+.ENDIF                                          # VAXC_OR_FORCE_VAXC
+.ELSE                                       # __VAX__
 DESTM = UNK
 UNK_DEST = 1
-.ENDIF                                  # __VAX__
+.ENDIF                                      # __VAX__
+.ENDIF                                  # __ALPHA__
 .ENDIF                              # __IA64__
-.ENDIF                          # __ALPHA__
+.ENDIF                          # __X86_64__
 
 # Large-file support.  Always no on VAX.  Assume yes elsewhere.  On
 # Alpha, the .FIRST rule will detect incompatibility (before VMS V7.2).
@@ -144,17 +167,12 @@ NON_VAX_CMPL = 1
 .FIRST
 	@ write sys$output -
  "   Unknown system architecture."
-.IFDEF __MMK__                      # __MMK__
 	@ write sys$output -
- "   MMK on IA64?  Try adding ""/MACRO = __IA64__""."
-.ELSE                               # __MMK__
+ "   Old/obsolete MMK or MMS?  Try adding ""/MACRO = ARCH=xxxx"","
 	@ write sys$output -
- "   MMS too old?  Try adding ""/MACRO = MMS$ARCH_NAME=ALPHA"","
+ "   where ""xxxx" is ""ALPHA"", ""IA64"", ""VAX"", or ""X86_64"","
 	@ write sys$output -
- "   or ""/MACRO = MMS$ARCH_NAME=IA64"", or ""/MACRO = MMS$ARCH_NAME=VAX"","
-	@ write sys$output -
- "   as appropriate.  (Or try a newer version of MMS.)"
-.ENDIF                              # __MMK__
+ "   as appropriate.  (Or try a newer version of MMK or MMS.)"
 	@ write sys$output ""
 	I_WILL_DIE_NOW.  /$$$$INVALID$$$$
 .ELSE                           # UNK_DEST
@@ -173,6 +191,12 @@ NON_VAX_CMPL = 1
 	I_WILL_DIE_NOW.  /$$$$INVALID$$$$
 .ELSE                                   # LARGE_VAX
 .FIRST
+.IFDEF COM1                             # COM1
+	@$(COM1)
+	@ write sys$output ""
+.ENDIF                                  # COM1
+	@ show time
+	@ write sys$output ""
 	@ write sys$output "   Destination: [.$(DEST)]"
 	@ write sys$output ""
 	if (f$search( "$(DEST).DIR;1") .eqs. "") then -

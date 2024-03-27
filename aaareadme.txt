@@ -1,4 +1,4 @@
-            VMSTAR V4.3, 2020-12-29
+            VMSTAR V4.4, 2022-06-28
             =======================
 
 ------------------------------------------------------------------------
@@ -50,7 +50,8 @@ helpful, and are appreciated.
 Running VMSTAR with no options or arguments provides brief "Usage"
 notes:
 
-VMSTAR V4.3 (Dec 23 2020) (-large-file)
+$ vmstar
+VMSTAR V4.4 (Jun 22 2022) (+large-file)
 usage (UNIX-style): vmstar -[h|c|t|x][BbDdFfopsvwz] [params ...] [file [...]]
 usage (VMS-style):  VMSTAR [options] tarfile [file [, file [...]]]
  Options (UNIX-style, VMS-style):
@@ -285,6 +286,8 @@ in an architecture-specific subdirectory:
       [.IA64L]          IA64, large-file support.
       [.VAX]            VAX, DEC C.
       [.VAXV]           VAX, VAX C.
+      [.X86_64]         x86_64, no large-file support.
+      [.X86_64L]        x86_64, large-file support.
 
 ------------------------------------------------------------------------
 
