@@ -1,0 +1,18 @@
+Here's the list of stuff that should be added to VMSTAR:
+
+Short term (please concentrate on this first):
+
+	* Changing VMSTAR so GMT time is stored in the .tar file,
+	instead of local time.  The UTC routines should be used for
+	this, but I still have to learn how to use them.
+	/Richard Levitte
+
+Long term:
+
+	* Capability to mount the device to which the tar dump will be
+	written, if it isn't already mounted.
+
+	* Capability to tell the user to mount a new tape if the tar
+	dump takes more than one.
+
+More things could be added with time.

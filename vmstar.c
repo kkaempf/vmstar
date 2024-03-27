@@ -1,5 +1,5 @@
 #define module_name	VMSTAR
-#define module_version	"V2.1-1"
+#define module_version	"V2.2"
 /*
  *	VMSTAR.C - a Un*x-like tar reader/writer for VMS
  *	           based on TAR2VMS and VMS2TAR
@@ -16,6 +16,7 @@
  *	  /AUTOMATIC -- Automatically determine file type
  *	  /DOTS      -- Maintain `.' usage
  *	  /ODS2      -- Use ODS2 style file names on ODS5 volumes
+ *	  /SYMLINKS  -- Create real symlinks instead of text files.
  *
  * Usage (Un*x-style):
  * 	tar h|x|t|c[v][w][b][z][d][o][D][f tarfile] [file [file...]]
@@ -36,8 +37,9 @@
  *	o - specify files are created with ODS2 type names on ODS5 volumes.
  *	    At this point a number of these switches are already incompatible
  *	    with GNU tar - I'm adding another. With the instability of the
- *	    U**X world I could choose something not used under GNU tar and 
+ *	    U**X world I could choose something not used under GNU tar and
  *	    have it used the next day by them, so I won't even bother.
+ *	s - Create real symlinks instead of text files.
  *	f - specify tarfile name, default is $TAPE
  *
  *	file - space-separated list of file names, can include VMS-style
@@ -90,9 +92,10 @@
 #module module_name module_version
 #endif
 
+#include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
 
 #include <lib$routines.h>
@@ -103,10 +106,6 @@
 #include "vmstar_cmdline.h"
 #include "vmstarP.h"
 
-/* forward declarations of routines */
-
-int tar2vms();
-int vms2tar();
 
 /* main -- parses options, dispacthes to tar2vms and vms2tar */
 
@@ -118,7 +117,14 @@ register char *cp;
 /* Decode the options and parameters: */
 
     status = vmstar_cmdline (&argc, &argv);
-    if (!(status & 1)) return(status | STS$M_INHIB_MSG);
+
+    /* 2010-11-14 SMS.
+     * Setting STS$M_INHIB_MSG can cause an annoying
+     * "%TRACE-W-TRACEBACK, symbolic stack dump follows [...]" for any
+     * parsing error.  Was:
+     * if (!(status & 1)) return(status | STS$M_INHIB_MSG);
+     */
+    if (!(status & 1)) return status;
 
 /* Set up the current directory names */
 
@@ -145,20 +151,27 @@ register char *cp;
     *cp++ = '\0';
     strcpy(curdir, cp);
 
+    /* 2009-05-08 SMS.
+     * Clean up the current directory spec ("[000000.", "][", ...), to
+     * avoid spurious mismatches in VMS2TAR.C: scan_name(), (where it
+     * will be compared with a cleaned-up spec).
+     */
+    cleanup_dire( curdir);
+
     for (cp = curdir; *cp != '\0'; ++cp)
         *cp = toupper(*cp);		/* map to uppercase */
 
     if (create == 0)
-        tar2vms(argc,argv);
+        tar2vms( argc, argv);
     else
     {
 	if (argc == 0) {
-	    printf("tar: input file(s) not specified.\n");
+	    fprintf( stderr, "tar: input file(s) not specified.\n");
 #if 0
-	    usage ();
+	    usage ( EINVAL);
 #endif
-	    exit(SS$_NORMAL);
+            exit( EINVAL);
 	}
-        vms2tar(argc,argv);
+        vms2tar( argc, argv);
     }
 }

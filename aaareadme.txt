@@ -1,216 +1,310 @@
-*******
-VMSTAR V3.4-1   Includes modifications by:
-		Hunter Goatley <goathunter@WKUVX1.WKU.EDU>
-		Jamie Hanrahan <jeh@cmkrnl.com>
-		Richard Levitte <levitte@lp.se>
-		Patrick Young <P.Young@unsw.EDU.AU>
-*******
+            VMSTAR V4.0, 2010-11-23
+            =======================
 
-General information
--------------------
+------------------------------------------------------------------------
 
-VMSTAR  is  a  TAR  reader/writer  for  VMS.  It can read archives ("tarfiles")
-created  by  the Un*x command "tar" and also create such archives. Tarfiles can
-be disk files or directly on tape.
+      Description
+      -----------
 
-This version supports both VMS-style and UNIX-style command lines.
+   VMSTAR is a "tar" archive reader/writer for VMS.  VMSTAR can work with
+"tar" archives on disk or tape.  VMSTAR is intended primarily for data
+interchange with UNIX(-like) systems, where "tar" programs are more
+commonly used.  It can be expected to have trouble with VMS files which
+do not have UNIX-like record formats (Stream_LF, fixed-512), so it's not
+a good replacement for more RMS-aware programs like BACKUP or Info-ZIP
+Zip and UnZip.
 
-VMSTAR is based on the TAR2VMS and VMS2TAR programs written by:
+   When built with large-file support enabled (on reasonably modern,
+non-VAX systems), VMSTAR should be able to extract large files (>2GB
+or >8GB) from archives which were created using Solaris "tar -E" or GNU
+"tar".  Similarly, long archive path names (>100 characters) should be
+handled properly if the VMS file system can deal with them.  VMSTAR uses
+GNU-"tar"-style archive format extensions when it creates an archive
+containing large files or long names.
 
-phone (613) 545-2925
+------------------------------------------------------------------------
 
-BITNET:         PENSTONE@QUCDNEE1       (Preferred)
-                PENSTONE@QUCDN  (If the other doesn't work)
+      History
+      -------
 
-The extra work has been done by:
+   VMSTAR is based on the TAR2VMS and VMS2TAR programs written (long
+ago) by Sid Penstone.  The following people are believed to have made
+changes to the product in the many years since:
 
-Alain Fauconnet
-SIM/INSERM U194         (complete address at the end of this file)
-PARIS - FRANCE
+      Alain Fauconnet
+      Patrick Young <P.Young@unsw.EDU.AU>
+      Richard Levitte <levitte@lp.se>
+      Jamie Hanrahan <jeh@cmkrnl.com>
+      Hunter Goatley <goathunter@WKUVX1.WKU.EDU>
+      Steven Schweda <sms@antinode.info>
 
-Bitnet: FAUCONNE@FRSIM51
+------------------------------------------------------------------------
 
-TAR2VMS and VMS2TAR have been merged into a  single  program.  I  made  several
-improvements, bug fixes and message cleanup. For those  who  know  TAR2VMS  and
-VMS2TAR, the main differences are:
+      Usage Basics
+      ------------
 
-- everything is now in a single program that can be used for extracting files
-from tar archives, listing the contents of tar archives or creating them.
+   VMSTAR offers both UNIX-style and VMS-style command line interfaces.
+Running VMSTAR with no options or arguments provides brief "Usage"
+notes:
 
-- VMSTAR now accepts a `f tarfile' option to explicitely specify the tarfile
-name (either a VMS file name or a VMS device name).
+VMSTAR V4.0 (Oct 28 2010)
+Usage (UNIX-style): vmstar -[h|c|t|x][BbDdFfopsvwz] [params ...] [file [...]]
+Usage (VMS-style):  VMSTAR [options] tarfile [file [, file [...]]]
+ Options (UNIX-style, VMS-style):
+ h        /HELP           Print this text and exit.  (Other options ignored.)
+ c        /CREATE         Create a tarfile.
+ t        /LIST           List the contents of a tarfile.
+ x        /EXTRACT        Extract files from tarfile.
 
-- if this option is not used, the logical name "$TAPE" is translated.
+ B        /BINARY         Extract files as binary (fixed-512).
+ b b_f    /BLOCK_FACTOR=b_f  Number of 512-byte records in a tar block.
+ D        /DATE_POLICY =  Specify which times of extracted files to set.
+  c|C|m|M  ([NO]CREATION, [NO]MODIFICATION)  (Default: CREAT, MODIF.)
+  A|n      ALL, NONE      ALL: (CREAT, MODIF), NONE: (NOCREAT, NOMODIF).
+  (UNIX-style: "c" = NOCREAT, "C" = CREAT, "m" = NOMODIF, "M" = MODIF,
+               "A" = ALL, "n" = NONE.)
+ d        /DOTS           Archive names retain a trailing dot.
+                          (Default: Trim trailing dots: "fred." -> "fred".)
+                          Extract literal dots ("^.") in directory name (ODS5).
+                          (Default: Convert dots in directory name to "_".)
+ F        /FORCE          Forces archiving of unsupported file formats.
+ f t_f    (first arg)     Specify a tar file (disk or tape).  Default: $TAPE
+ o        /ODS2           Archive down-cased names, even on ODS-5 volumes.
+                          Extract using ODS-2 naming, even on ODS-5 volumes.
+ p        /NOPADDING      Inhibits padding the last block of the tarfile.
+ s        /SYMLINKS       Extract archived symlinks as real symlinks.
+ u        /UNDERDOT       "a.b.c" -> ODS2 "A_B.C".  (Default: "A.B_C").
+ v        /VERBOSE        Display processed file info.  (Alone: Show version.)
+ w        /CONFIRM        Prompt for confirmation before archive/extract.
+ z        /AUTOMATIC      Automatically determine file type.
 
-- checksums are verified at file extraction.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-- VMSTAR will extract files from archives as VMS rfm=stream_lf, rat=cr files,
-except if new option `b' is specified. In this case, extracted files ared
-created as rfm=fixed, mrs=512, rat=none i.e. suitable for compressed files to
-be decompressed using LZDCMP or for VMS images.
+      Usage Details
+      -------------
 
-- VMSTAR has a more Un*x-like syntax, if several file names are specified as
-command line parameters they must be separated by spaces (not commas) and there
-is not context propagation "a la BACKUP".
+   Command-line Syntax
+   -------------------
 
-- VMSTAR allows VMS-style wildcarded strings for Un*x-style file  names  to  be
-specified when extracting from a tar archive, e.g. :
+   Either a UNIX-style or a VMS-style command line may be used.  To
+specify a list of files, when using a UNIX-style command line, use a
+space-separated file list.  When using a VMS-style command line, use a
+comma-separated file list.  For example:
 
-$ tar xvf foo.tar */source/*/sa%%%.c
+      vmstar -cf [-]hc.tar *.h *.c
+      vmstar /create [-]hc.tar *.h, *.c
 
-- VMSTAR will attempt to create relative tar archives i.e. archives where
-filenames are recorded as "./foo/bar/baz" whenever possible. This can be
-specifically avoided by having a device name in file name argument, e.g. :
+   With a UNIX-style command line, if no tarfile is specified ("f"),
+then the logical name "$TAPE" is used.  With a VMS-style command line,
+the first argument specifies the tarfile, but if there are no arguments,
+then the logical name "$TAPE" is used.  So, for example, the following
+commands are equivalent:
 
-$ tar cvf foo.tar DISK$USERS[...]*.c
+      vmstar -tfv $TAPE
+      vmstar -tv
+      vmstar /list /verbose $TAPE
+      vmstar /list /verbose
 
-or specifying an absolute VMS file specification, e.g. :
+   Unlike a normal UNIX "tar" program, when creating an archive, VMSTAR
+does not automatically descend through a directory tree.  Use the usual
+VMS "[...]" wildcard syntax to get this kind of behavior.  For example,
+instead of:
 
-$ tar cvf foo.tar [SMITH.C...]
+      tar cf ../all.tar .
 
-- VMSTAR will handle tar archives which when restored would create more than 8
-levels of directories (the X11 distribution from MIT for instance !). Excessive
-levels of directories will be resolved as follows:
+Use:
 
-d1/d2/d3/d4/d5/d6/d7/d8/d9/foo -> [D1.D2.D3.D4.D5.D6.D7.D8$D9]FOO
+      vmstar -cf [-]all.tar [...]
+      vmstar /create [-]all.tar [...]
 
-- VMSTAR no longer requires the creation of an intermediate scratch file when
-archiving text files as VMS2TAR did.
+(When creating an archive, VMSTAR uses a default file specification of
+"*.*;" for input files, so "[...]" here is equivalent to "[...]*.*;".)
 
-- VMSTAR does *not* allow to read tarfiles past the EOF mark as TAR2VMS did.
+   VMSTAR will create an archive using relative path names (without a
+leading slash), or absolute path names (with a leading slash), depending
+on the form of the input file specifications.  Using a relative VMS
+directory specification will result in relative paths in the archive.
+Using an absolute VMS directory specification in the file specification
+will result in absolute paths in the archive.  For example:
 
-- the `w' option (same as "/CONFIRM" for VMS commands) has been implemented for
-create archive and extract functions.
+      $ vmstx =cfv alphal_rel.tar [.alphal].exe       ! Relative.
+      Oct 28 23:04:13 2010    77312 ALPHAL/VMSTAR.EXE
 
-- VMSTAR has a VMS help file (VMSTAR.HLP) that can be added to your HELPLIB.HLB
-to provide online help.
+      $ here_root = f$environment( "default") - "]"+ ".]"
+      $ define /trans = conc here_root 'here_root'
+      $ set default here_root:[000000]
+      $ vmstx -cfv alphal_abs.tar [alphal].exe        ! Absolute.
+      Oct 28 23:04:13 2010    77312 /ALPHAL/VMSTAR.EXE
 
-- normally, VMSTAR will convert dots in the Un*x directory specifications
-to underscores, like this:
+Using absolute paths in a "tar" archive is generally unwise, because
+some "tar" implementations (including VMSTAR) can not easily extract a
+file with an absolute path to anywhere other than where that absolute
+path specifies.
 
-emacs-19.22/src/buffer.c -> [EMACS-19_22.SRC]BUFFER.C
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-If you want to suppress this feature, use the option `d'.
+   Attributes of Extracted Files
+   -----------------------------
 
-- VMSTAR now comes with a DCL interface as well.  It recognises quite well
-if you're using the Un*x interface, or the DCL interface.
+   By default, VMSTAR will extract files from archives with attributes
+rfm:stream_lf, rat:cr.  If /BINARY ("B") is specified, then extracted
+files are created as rfm:fixed, mrs:512, rat:none.
 
-- many other differences, the code has been extensively reworked with
-simplification as a goal. This probably caused the introduction of some bugs...
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+   Wildcards in Extracted File List
+   --------------------------------
 
-Build instructions
-------------------
+   VMSTAR allows VMS-style wildcards in UNIX-style file names to be
+specified when extracting from an archive.  These user-specified
+patterns are matched against the (UNIX-style) path names in the archive.
+For example:
 
-Compile and link VMSTAR.C as follows:
+      vmstar -xvf foo.tar */source/*/sa%%%.c
 
-$ @BUILD
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-or if you have MMS (the free clone MMK should work as well):
+   Deep Directories
+   ----------------
 
-$ MMS/IGNORE=WARNING
+   VMSTAR will attempt to deal with tar archives which, when restored,
+would create more levels of directories than the local file system
+allows (8, on old VMS versions).  It does this by concatenating the
+lowest directory names (with "$" separation), as needed.  For example:
 
-Installation instructions
--------------------------
+      d1/d2/d3/d4/d5/d6/d7/d8/d9/foo -> [D1.D2.D3.D4.D5.D6.D7.D8$D9]FOO.
 
-When you're done building, define a foreign command symbol in SYLOGIN.COM:
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-$ VMSTAR :== $ <wherever>VMSTAR
+   Name Restrictions (ODS2)
+   ------------------------
 
-You can optionally add VMSTAR in your VMS help library as follows:
+   When extracting to an ODS2 file system, VMSTAR will convert excess
+dots in an archive path specification to underscores, as in the
+following example.  (The default mode is "dot-under", preserving the
+first dot in a file name, and replacing the others with underscores.)
 
-$ LIBRARY/HELP/INSERT SYS$COMMON:[SYSHLP]HELPLIB.HLB VMSTAR.HLP
+      wget-1.12/src/config.h.in -> [.WGET-1_12.SRC]CONFIG.H_IN
 
-        Usage
-        -----
+Or, with /UNDERDOT ("u") (preserving the last dot in a file name):
 
-        tar h|x|t|c[v][w][b][d][f tarfile] [file [file...]]
-	h - print a description and then exit.
-        x - extract from tarfile, create VMS files
-        t - type directory of tarfile
-        c - create tarfile, archive VMS files
-        v - verbose (list names of files being archived/extracted)
-        w - wait for confirmation before extracting/archiving
-        b - binary mode extract, create (rfm=fixed, rat=none, mrs=512) files
-        d - keep trailing dots in file names
-        f - specify tarfile name, default is $TAPE
-        file - space-separated list of file names, can include VMS-style
-               string wildcards on extract, can be any VMS file name
-               specification (except DECnet) on create archive.
+      wget-1.12/src/config.h.in -> [.WGET-1_12.SRC]CONFIG_H.IN
 
+   When extracting to an ODS5 file system, VMSTAR will, by default,
+convert dots in directory names to underscores, but will preserve
+multiple dots in file names:
 
-Tapes for reading/writing of tarfiles should be mounted
-/FOREIGN/RECORD=512/BLOCK=10240
+      wget-1.12/src/config.h.in -> [.wget-1_12.src]config^.h.in
+
+To preserve dots in directory names, too, specify /DOTS ("d"):
+
+      wget-1.12/src/config.h.in -> [.wget-1^.12.src]config^.h.in
+
+Specifying /ODS2 ("o") will force the ODS2 behavior even on an ODS5
+volume:
+
+      wget-1.12/src/config.h.in -> [.WGET-1_12.SRC]CONFIG.H_IN
+
+or, with /UNDERDOT ("u"):
+
+      wget-1.12/src/config.h.in -> [.WGET-1_12.SRC]CONFIG_H.IN
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+   Tape
+   ----
+
+   Nowadays, VMSTAR is typically used with "tar" archives on disk, but
+it should work with real tape devices, too.  For the default
+/BLOCK_FACTOR ("b") of 20, use these MOUNT options (20* 512 = 10240):
+
+      /FOREIGN /RECORDSIZE = 512 /BLOCKSIZE = 10240
+
+For different /BLOCK_FACTOR ("b") values, adjust the MOUNT /BLOCKSIZE
+value accordingly.
 
 Example:
 
-$ MOUNT/FOREIGN/RECORD=512/BLOCK=10240 MUA0: "" $TAPE
-$ VMSTAR/EXTRACT/VERBOSE MUA0:
+      $ MOUNT /FOREIGN /RECORD = 512 /BLOCK = 10240 MUA0: "" $TAPE
+      $ VMSTAR /EXTRACT /VERBOSE MUA0:
 
-NOTE:  VMSTAR is only guaranteed to work with TU81 and similar tape devices.
-VMSTAR has been shown to work on DEC TLZ04 (DAT) and some odd DAT player
-from Hewlett Packard.
+Specifying the logical name "$TAPE" here is optional, but it may be
+convenient, especially when using the UNIX-style command line of VMSTAR
+(where "f $TAPE" is a potentially useful default).
 
-Restrictions
-------------
+------------------------------------------------------------------------
 
-Because of diffrences in the Un*x and VMS filesystems, some files may  fail  to
-be correctly  transferred  to/from  the  tarfile.  This  can  be  caused  by  :
+      Building VMSTAR
+      ---------------
 
-- restrictions in VMS file naming scheme: extra dots in file names will be
-mapped to underscores, dummy directory names will be generated if archive
-contains more than 8 levels of subdirectories, links are extracted as empty
-files containing only a short message "this file is only a link to...", all
-file names are mapped to uppercase etc.
+   The kit includes MMS/MMK builders and a DCL command procedure.
+Comments in the main builder files (BUILD_VMSTAR.COM, DESCRIP.MMS)
+explain usage details.  Typical build commands are shown below.
 
-- restrictions of the Un*x filesystem: tar will only get the latest version of
-a VMS file to enter it into the archive, no trace of the orginal file device
-name is kept in the archive.
+      @ BUILD_VMSTAR.COM         ! No large-file support (VAX).
+      @ BUILD_VMSTAR.COM LARGE   ! Non-VAX, with large-file support.
 
-- VMS strong file typing: VMSTAR can only safely tranfer back and forth 
-VMS "text" files (rfm=vfc or stream_lf with rat=cr) or VMS fixed size record,
-512 bytes/record, rat=none files (e.g. .EXE image files).
-VMSTAR will skip other file types (this includes .OBJ, they *can't* be
-archived.  Library files may work, but be cautious with them).
+      MMS                        ! No large-file support (VAX).
+      MMS /MACRO = LARGE=1       ! Non-VAX, with large-file support.
 
-Other restrictions:
+   Product (object, link option, and executable) files should be created
+in an architecture-specific subdirectory:
 
-RMS file attributes are lost in the archive process, text files are archived as
-<record><LF><record><LF>, fixed files are archived as is.
+      [.ALPHA]          Alpha, no large-file support.
+      [.ALPHAL]         Alpha, large-file support.
+      [.IA64]           IA64, no large-file support.
+      [.IA64L]          IA64, large-file support.
+      [.VAX]            VAX, DEC C.
+      [.VAXV]           VAX, VAX C.
 
-VMSTAR  will always restore files relative to your current RMS default if names
-in  tarfile do not begin by `/'. If file names in tarfile begin with a `/' (bad
-practice), an attempt will be made to restore files to the absolute path. There
-is currently no way to explicitely specify the target VMS directory where files
-should be extracted.
+------------------------------------------------------------------------
 
-No  attempt  has  been  made to handle search list as RMS defaults (e.g. SYSTEM
-account). Be very careful about that.
+      Installation
+      ------------
 
-The  current  version  of  VMSTAR  has  *not*  been  fully  tested.  I probably
-introduced  many  bugs  not  existing  in  Sid  Penstone's  programs. VMSTAR is
-provided "as-is", I cannot guarantee it will do what you want or even what it's
-supposed  to  do  but  I'd  like  to hear about it if you have problems. If you
-report  a  problem,  don't  bother  with  providing me a fix but *do* try to be
-precise on what happened and how it happened.
+   To complete the installation, the executable may be left in place, or
+moved (or copied) to a convenient place.  While other methods (like
+DCL$PATH) exist, most users define a DCL symbol to make VMSTAR available
+as a foreign command.  This symbol definition may be placed in a user's
+SYS$LOGIN:LOGIN.COM, or in a more central location, like
+SYS$MANAGER:SYLOGIN.COM.  A typical symbol definition might look like
+this:
 
-	BUGS
-	----
+           VMSTAR :== $ dev:[dir]VMSTAR.EXE
 
-No known bugs.
 
-+-------------------------------------------------------------------------+
-|  Alain ("HAL 1") Fauconnet   Research laboratory in medical informatics |
-|  System Manager              (expert systems, NL proc., statistics...)  |
-|  SIM/INSERM U194             EARN/Bitnet:       FAUCONNE@FRSIM51        |
-|  Faculte de Medecine         VMS PSI Mail: PSI%+208075090517::FAUCONNET |
-|  91 Boulevard de l'Hopital   FAX:          (+33) 1-45-86-56-85          |
-|  75634 PARIS CEDEX 13 FRANCE PTT net:      (+33) 1-45-85-15-29          |
-|  "HAL... open the door, please!" (2001 Space Odyssey)                   |
-|  Disclaimer: This is machine-generated random text, no meaning at all.  |
-+-------------------------------------------------------------------------+
+   A VMS HELP file, VMSTAR.HLP, is provided.  It can be added to an
+existing HELP library, or a separate HELP library can be created:
 
-R Levitte, Levitte Programming;  Spannv. 38, I;  S-161 43  Bromma;  SWEDEN
-      Tel: +46-8-26 52 47;  Cel: +46-10-222 64 05;  No fax right now
-  PGP key fingerprint = A6 96 C0 34 3A 96 AA 6C  B0 D5 9A DF D2 E9 9C 65
-   Check http://www.lp.se/~levitte for my public key.   bastard@bofh.se
+      LIBRARY /HELP dev:[dir]existing_library.HLB VMSTAR.HLP
+or:
+      LIBRARY /CREATE /HELP VMSTAR.HLB VMSTAR.HLP
+
+      HELP HELP /LIBRARY      ! For more information on alternate or
+      HELP HELP /USERLIBRARY  ! user-supplied HELP libraries.
+
+For example, to add the VMSTAR help to the system HELP library:
+
+      LIBRARY /HELP SYS$COMMON:[SYSHLP]HELPLIB.HLB VMSTAR.HLP
+
+------------------------------------------------------------------------
+
+      Bugs
+      ----
+
+   Traditionally, VMSTAR is not well tested, and this version is no
+exception.  Potential weak spots include error handling in builds
+without large-file support (typically on VAX or older Alpha systems)
+when trying to deal with archives which contain large files.  Similarly,
+archives with long names which can't be handled on an old ODS2 file
+system might cause unexpected problems.
+
+   VMS files named "." or ".." ("^..") will be archived as "." or "..",
+and those names may be expected to cause trouble on a UNIX(-like) file
+system.
+
+   After extensive changes to the command-line interface and the
+functional code since V3.4-1, many things are possible.  Complaints are
+always welcome.
+
+------------------------------------------------------------------------

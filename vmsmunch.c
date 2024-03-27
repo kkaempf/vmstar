@@ -1,5 +1,5 @@
 #define module_name	VMSMUNCH
-#define module_version	"V1.3-4"
+#define module_version	"V1.4"
 /*---------------------------------------------------------------------------
 
   VMSmunch.c                    version 1.3-4                   28 Apr 1992
@@ -16,6 +16,14 @@
   power of Joe's original routine at the disposal of various routines used
   by UnZip (and Zip, possibly), not least among them the utime() function.
   Read on for details...
+
+        30-Dec-2010     Steven Schweda <sms@antinode.info>
+                        Added SET_MODE and SET_PROT actions.
+                        Changed to prototype function declarations.
+
+	 7-Apr-2010     Steven Schweda <sms@antinode.info>
+                        Changed to use NAML instead of NAM where
+			available.
 
 	 8-May-1998	Richard Levitte <richard@levitte.org>
 			Add code to change the file size (only on fixed
@@ -45,7 +53,7 @@
 
   Usage (i.e., "interface," in geek-speak):
 
-     int VMSmunch( char *filename, int action, char *ptr );
+     int VMSmunch( char *filename, int action, void *ptr );
 
      filename   the name of the file on which to be operated, obviously
      action     an integer which specifies what action to take
@@ -53,22 +61,36 @@
 
   The possible values for the action argument are as follows:
 
-     GET_TIMES      get the creation and revision dates of filename; ptr
-                    must point to an empty VMStimbuf struct, as defined 
+     GET_TIMES      Get the creation and revision dates of filename; ptr
+                    must point to an empty VMStimbuf struct, as defined
 		    in vmsmunch.h
                     (with room for at least 24 characters, including term.)
-     SET_TIMES      set the creation and revision dates of filename (utime
+
+     SET_TIMES      Set the creation and revision dates of filename (utime
                     option); ptr must point to a valid VMStimbuf struct,
                     as defined in vmsmunch.h
-     GET_RTYPE      get the record type of filename; ptr must point to an
+
+     GET_RTYPE      Get the record type of filename; ptr must point to an
                     integer which, on return, is set to the type (as defined
                     in VMSmunch.h:  FAT$C_* defines)
-     CHANGE_RTYPE   change the record type to that specified by the integer
+
+     CHANGE_RTYPE   Change the record type to that specified by the integer
                     to which ptr points; save the old record type (later
                     saves overwrite earlier ones)
-     RESTORE_RTYPE  restore the record type to the previously saved value;
+
+     RESTORE_RTYPE  Restore the record type to the previously saved value;
                     or, if none, set it to "fixed-length, 512-byte" record
                     format (ptr not used)
+
+     SET_MODE       Set the file protection according to a UNIX-style
+                    mode value (mode_t).
+                    System protection = owner protection.
+                    Delete protection = write protection, except for a
+                    directory, for which delete protection (permission)
+                    is always inhibited.
+
+     SET_PROT       Set the file protection according to a VMS-style
+                    protection value (short int).
 
   ---------------------------------------------------------------------------
 
@@ -78,10 +100,10 @@
      BITNET: JOE@FHCRCVAX
      PHONE: (206) 467-4970
 
-     There are no restrictions on this code, you may sell it, include it 
-     with any commercial package, or feed it to a whale.. However, I would 
+     There are no restrictions on this code, you may sell it, include it
+     with any commercial package, or feed it to a whale.. However, I would
      appreciate it if you kept this comment in the source code so that anyone
-     receiving this code knows who to contact in case of problems. Note that 
+     receiving this code knows who to contact in case of problems. Note that
      I do not demand this condition..
 
   ---------------------------------------------------------------------------*/
@@ -98,16 +120,24 @@
 /*  Includes, Defines, etc.  */
 /*****************************/
 
-#include <descrip.h>
-#include <rms.h>
 #include <stdio.h>
-#include <iodef.h>
 #include <string.h>
+#include <types.h>                      /* mode_t */
+
+#include <atrdef.h>
+#include <descrip.h>
+#include <fibdef.h>
+#include <iodef.h>
+#include <rms.h>
+#include <ssdef.h>
 #include <starlet.h>
-#include <atrdef.h>   /* this gets created with the c3.0 compiler */
-#include <fibdef.h>   /* this gets created with the c3.0 compiler */
+#include <xabprodef.h>
 
 #include "VMSmunch.h"  /* GET/SET_TIMES, RTYPE, etc. */
+
+#ifndef __MODE_T                        /* VAX C. */
+# define mode_t unsigned short
+#endif /* ndef __MODE_T */
 
 #ifdef __DECC
 #pragma member_alignment __save
@@ -121,8 +151,6 @@
 #define RTYPE     fat$r_rtype_overlay.fat$r_rtype_bits
 #define RATTRIB   fat$r_rattrib_overlay.fat$r_rattrib_bits
 
-static void asctim();
-static void bintim();
 
 /* from <ssdef.h> */
 #ifndef SS$_NORMAL
@@ -131,6 +159,72 @@ static void bintim();
 #endif
 
 
+/* VMS protection from UNIX permission table. */
+
+static unsigned short prot_of_perm[ 2][ 8] =
+{
+    /* [0][perm]: Not a directory, delete = write. */
+    {
+        XAB$M_NOREAD | XAB$M_NOWRITE | XAB$M_NODEL | XAB$M_NOEXE,    /* --- */
+        XAB$M_NOREAD | XAB$M_NOWRITE | XAB$M_NODEL,                  /* --x */
+        XAB$M_NOREAD |                               XAB$M_NOEXE,    /* -w- */
+        XAB$M_NOREAD,                                                /* -wx */
+                       XAB$M_NOWRITE | XAB$M_NODEL | XAB$M_NOEXE,    /* r-- */
+                       XAB$M_NOWRITE | XAB$M_NODEL,                  /* r-x */
+                                                     XAB$M_NOEXE,    /* rw- */
+        0                                                            /* rwx */
+    },
+    /* [1][perm]: Directory, always nodelete. */
+    {
+        XAB$M_NOREAD | XAB$M_NOWRITE | XAB$M_NODEL | XAB$M_NOEXE,    /* --- */
+        XAB$M_NOREAD | XAB$M_NOWRITE | XAB$M_NODEL,                  /* --x */
+        XAB$M_NOREAD |                 XAB$M_NODEL | XAB$M_NOEXE,    /* -w- */
+        XAB$M_NOREAD |                 XAB$M_NODEL,                  /* -wx */
+                       XAB$M_NOWRITE | XAB$M_NODEL | XAB$M_NOEXE,    /* r-- */
+                       XAB$M_NOWRITE | XAB$M_NODEL,                  /* r-x */
+                                       XAB$M_NODEL | XAB$M_NOEXE,    /* rw- */
+                                       XAB$M_NODEL                   /* rwx */
+    }
+};
+
+
+
+
+/***********************/
+/*  Function asctim()  */
+/***********************/
+
+/* Convert 64-bit binval to string, put in time. */
+
+void asctim( char *time, int binval[ 2])
+{
+    static struct dsc$descriptor date_str =
+     { 23, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0 };
+
+    date_str.dsc$a_pointer = time;
+    sys$asctim( 0, &date_str, binval, 0);
+    time[ 23] = '\0';
+}
+
+
+
+
+/***********************/
+/*  Function bintim()  */
+/***********************/
+
+/* Convert time string to 64 bits, put in binval. */
+
+void bintim( char *time, int binval[ 2])
+{
+    static struct dsc$descriptor date_str =
+     { 0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0 };
+
+    date_str.dsc$w_length = strlen( time);
+    date_str.dsc$a_pointer = time;
+    sys$bintim( &date_str, binval);
+}
+
 
 
 
@@ -138,70 +232,81 @@ static void bintim();
 /*  Function VMSmunch()  */
 /*************************/
 
-int VMSmunch( filename, action, ptr )
-    char  *filename, *ptr;
-    int   action;
+int VMSmunch( char *filename, int action, void *ptr)
 {
-
     /* original file.c variables */
 
     static struct FAB Fab;
-    static struct NAM Nam;
+    static struct NAMX Nam;
     static struct fibdef Fib; /* short fib */
 
     static struct dsc$descriptor FibDesc =
       {sizeof(Fib),DSC$K_DTYPE_Z,DSC$K_CLASS_S,(char *)&Fib};
     static struct dsc$descriptor_s DevDesc =
-      {0,DSC$K_DTYPE_T,DSC$K_CLASS_S,&Nam.nam$t_dvi[1]};
+      {0,DSC$K_DTYPE_T,DSC$K_CLASS_S,&Nam.NAMX_T_DVI[1]};
     static struct fatdef Fat;
     static union {
       struct fchdef fch;
-      long int dummy;
+      int lword;
     } uchar;
+    static int is_dir;                  /* Is-directory flag. */
     static struct fjndef jnl;
-    static long int Cdate[2],Rdate[2],Edate[2],Bdate[2];
+    static int Cdate[ 2];
+    static int Rdate[ 2];
+    static int Edate[ 2];
+    static int Bdate[ 2];
     static short int revisions;
     static unsigned long uic;
     static union {
       unsigned short int value;
       struct {
-        unsigned system : 4;
-        unsigned owner : 4;
-        unsigned group : 4;
-        unsigned world : 4;
+        unsigned system : 4;            /* LS bits. */
+        unsigned owner :  4;
+        unsigned group :  4;
+        unsigned world :  4;            /* MS bits. */
       } bits;
     } prot;
+    static short mode;                  /* UNIX-format mode value. */
 
-    /* Stupid morons!  On Alphas, atr$l_addr is a pointer to void,
-       while it is an unsigned long on VAX. Argv!!!  -- Richard Levitte */
-#if defined(__alpha) || defined(__ia64)
-typedef void * addr_type;
+
+/* On VAX, define Goofy VAX Type-Cast to obviate /standard = vaxc.
+ * Otherwise, lame (ATR) system headers on VAX cause compiler warnings.
+ */
+#ifdef __VAX
+# define GVTC (unsigned int)
 #else
-typedef unsigned long addr_type;
+# define GVTC
 #endif
-    static struct atrdef Atr[] = {
-      {ATR$S_RECATTR,ATR$C_RECATTR,(addr_type)&Fat}, /* record attributes */
-      {ATR$S_UCHAR,ATR$C_UCHAR,(addr_type)&uchar}, /* File characteristics */
-      {ATR$S_CREDATE,ATR$C_CREDATE,(addr_type)&Cdate[0]}, /* Creation date */
-      {ATR$S_REVDATE,ATR$C_REVDATE,(addr_type)&Rdate[0]}, /* Revision date */
-      {ATR$S_EXPDATE,ATR$C_EXPDATE,(addr_type)&Edate[0]}, /* Expiration date */
-      {ATR$S_BAKDATE,ATR$C_BAKDATE,(addr_type)&Bdate[0]}, /* Backup date */
-      {ATR$S_FPRO,ATR$C_FPRO,(addr_type)&prot}, /* file protection  */
-      {ATR$S_UIC,ATR$C_UIC,(addr_type)&uic}, /* file owner */
-      {ATR$S_JOURNAL,ATR$C_JOURNAL,(addr_type)&jnl}, /* journal flags */
-      {0,0,0}
-    } ;
 
-    static char EName[NAM$C_MAXRSS];
-    static char RName[NAM$C_MAXRSS];
+    static struct atrdef Atr[] = {
+      {ATR$S_RECATTR, ATR$C_RECATTR, GVTC &Fat},    /* Record attributes */
+      {ATR$S_UCHAR, ATR$C_UCHAR, GVTC &uchar},      /* File characteristics */
+      {ATR$S_CREDATE, ATR$C_CREDATE, GVTC &Cdate[0]}, /* Creation date */
+      {ATR$S_REVDATE, ATR$C_REVDATE, GVTC &Rdate[0]}, /* Revision date */
+      {ATR$S_EXPDATE, ATR$C_EXPDATE, GVTC &Edate[0]}, /* Expiration date */
+      {ATR$S_BAKDATE, ATR$C_BAKDATE, GVTC &Bdate[0]}, /* Backup date */
+      {ATR$S_FPRO, ATR$C_FPRO, GVTC &prot},         /* File protection  */
+      {ATR$S_UIC, ATR$C_UIC, GVTC &uic},            /* File owner */
+      {ATR$S_JOURNAL, ATR$C_JOURNAL, GVTC &jnl},    /* Journal flags */
+      {0, 0, 0}
+    };
+
+    static char EName[NAMX_MAXRSS];
+    static char RName[NAMX_MAXRSS];
+
+/* Special ODS5-QIO-compatible name storage. */
+#ifdef NAML$C_MAXRSS
+    static char QName[ NAML$C_MAXRSS];          /* Probably need less here. */
+#endif /* NAML$C_MAXRSS */
+
     static struct dsc$descriptor_s FileName =
-      {0,DSC$K_DTYPE_T,DSC$K_CLASS_S,0};
-    static struct dsc$descriptor_s string = {0,DSC$K_DTYPE_T,DSC$K_CLASS_S,0};
+      {0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0};
+    static struct dsc$descriptor_s string =
+      {0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0};
     static short int DevChan;
     static short int iosb[4];
 
     static long int i,status;
-/*  static char *retval;  */
 
 
     /* new VMSmunch variables */
@@ -217,47 +322,76 @@ typedef unsigned long addr_type;
 
     /* initialize RMS structures, we need a NAM to retrieve the FID */
     Fab = cc$rms_fab;
-    Fab.fab$l_fna = filename;
-    Fab.fab$b_fns = strlen(filename);
-    Fab.fab$l_nam = &Nam; /* FAB has an associated NAM */
-    Nam = cc$rms_nam;
-    Nam.nam$l_esa = EName; /* expanded filename */
-    Nam.nam$b_ess = sizeof(EName);
-    Nam.nam$l_rsa = RName; /* resultant filename */
-    Nam.nam$b_rss = sizeof(RName);
+    Fab.FAB_L_NAMX = &Nam;              /* FAB has an associated NAM[L]. */
+    Nam = CC_RMS_NAMX;
+
+#ifdef NAML$C_MAXRSS
+
+    Fab.fab$l_dna = (char *) -1;        /* Using NAML for default name. */
+    Fab.fab$l_fna = (char *) -1;        /* Using NAML for file name. */
+
+    /* Special ODS5-QIO-compatible name storage. */
+    Nam.naml$l_filesys_name = QName;
+    Nam.naml$l_filesys_name_alloc = sizeof( QName);
+
+#endif /* NAML$C_MAXRSS */
+
+    FAB_OR_NAML( Fab, Nam).FAB_OR_NAML_FNA = filename;
+    FAB_OR_NAML( Fab, Nam).FAB_OR_NAML_FNS = strlen( filename);
+
+    Nam.NAMX_L_ESA = EName;     /* expanded filename */
+    Nam.NAMX_B_ESS = sizeof(EName);
+    Nam.NAMX_L_RSA = RName;     /* resultant filename */
+    Nam.NAMX_B_RSS = sizeof(RName);
 
     /* do $PARSE and $SEARCH here */
     status = sys$parse(&Fab);
-    if (!(status & 1)) return(status);
+    if (!(status & 1)) return status;
 
-    /* search for the first file.. If none signal error */
+    /* search for the first file.  If none signal error */
     status = sys$search(&Fab);
-    if (!(status & 1)) return(status);
+    if (!(status & 1)) return status;
 
     while (status & 1) {
         /* initialize Device name length, note that this points into the NAM
            to get the device name filled in by the $PARSE, $SEARCH services */
-        DevDesc.dsc$w_length = Nam.nam$t_dvi[0];
+        DevDesc.dsc$w_length = Nam.NAMX_T_DVI[0];
 
         status = sys$assign(&DevDesc,&DevChan,0,0);
-        if (!(status & 1)) return(status);
+        if (!(status & 1)) return status;
 
-        FileName.dsc$a_pointer = Nam.nam$l_name;
-        FileName.dsc$w_length = Nam.nam$b_name+Nam.nam$b_type+Nam.nam$b_ver;
+        /* Prepare the FileName for $QIO(). */
+
+#ifdef NAML$C_MAXRSS
+
+        /* Enable fancy name characters.  Note that "fancy" here does
+         * not include Unicode, for which there's no support elsewhere.
+         */
+        Fib.fib$v_names_8bit = 1;
+        Fib.fib$b_name_format_in = FIB$C_ISL1;
+
+        /* ODS5 Extended names used as input to QIO have peculiar
+         * encoding (perhaps to minimize storage?), so the special
+         * filesys_name result (typically containing fewer carets) must
+         * be used here.
+         */
+        FileName.dsc$a_pointer = Nam.naml$l_filesys_name;
+        FileName.dsc$w_length = Nam.naml$l_filesys_name_size;
+
+#else /* def NAML$C_MAXRSS */
+
+        /* Old-fashioned "name.type;ver". */
+        FileName.dsc$a_pointer = Nam.NAMX_L_NAME;
+        FileName.dsc$w_length =
+         Nam.NAMX_B_NAME+ Nam.NAMX_B_TYPE+ Nam.NAMX_B_VER;
+
+#endif /* def NAML$C_MAXRSS [else] */
 
         /* Initialize the FIB */
-        for (i=0;i<3;i++)
-#ifndef __DECC
-            Fib.fib$r_fid_overlay.fib$w_fid[i]=Nam.nam$w_fid[i];
-#else
-	    Fib.fib$w_fid[i]=Nam.nam$w_fid[i];
-#endif
-        for (i=0;i<3;i++)
-#ifndef __DECC
-            Fib.fib$r_did_overlay.fib$w_did[i]=Nam.nam$w_did[i];
-#else
-            Fib.fib$w_did[i]=Nam.nam$w_did[i];
-#endif
+        for (i=0;i<3;i++) {
+            Fib.FIB$W_FID[i]=Nam.NAMX_W_FID[i];
+            Fib.FIB$W_DID[i]=Nam.NAMX_W_DID[i];
+        }
 
         /* Use the IO$_ACCESS function to return info about the file */
         /* Note, used this way, the file is not opened, and the expiration */
@@ -267,21 +401,23 @@ typedef unsigned long addr_type;
         if (!(status & 1))
 	  {
 	    sys$dassgn(DevChan);
-#ifdef debug
-	    printf("vmsmunch() returns after IO$_ACCESS with status %u\n",
-		   status);
+#ifdef DEBUG
+	    fprintf( stderr,
+             "vmsmunch() returns after IO$_ACCESS with status %%x%08x\n",
+             status);
 #endif
-	    return(status);
+	    return status;
 	  }
         status = iosb[0];
         if (!(status & 1))
 	  {
 	    sys$dassgn(DevChan);
-#ifdef debug
-	    printf("vmsmunch() returns after IO$_ACCESS with status %u\n",
-		   status);
+#ifdef DEBUG
+	    fprintf( stderr,
+             "vmsmunch() returns after IO$_ACCESS with status %%x%08x\n",
+             status);
 #endif
-	    return(status);
+	    return status;
 	  }
 
     /*-----------------------------------------------------------------------
@@ -301,11 +437,11 @@ typedef unsigned long addr_type;
 		  bintim(((struct VMStimbuf *)ptr)->modtime, Cdate);
               if (((struct VMStimbuf *)ptr)->actime != 0)
 		  bintim(((struct VMStimbuf *)ptr)->actime, Rdate);
-#ifdef debug
-	      printf("setting Cdate to %s\n",
-		     ((struct VMStimbuf *)ptr)->modtime);
-	      printf("setting Rdate to %s\n",
-		     ((struct VMStimbuf *)ptr)->actime);
+#ifdef DEBUG
+	      fprintf( stderr, "setting Cdate to %s\n",
+               ((struct VMStimbuf *)ptr)->modtime);
+	      fprintf( stderr, "setting Rdate to %s\n",
+               ((struct VMStimbuf *)ptr)->actime);
 #endif
               break;
 
@@ -316,7 +452,7 @@ typedef unsigned long addr_type;
 
           case CHANGE_RTYPE:
               old_rtype = Fat.RTYPE.fat$v_rtype;         /* save current one */
-              if ((*(int *)ptr < FAT$C_UNDEFINED) || 
+              if ((*(int *)ptr < FAT$C_UNDEFINED) ||
                   (*(int *)ptr > FAT$C_STREAMCR))
                   Fat.RTYPE.fat$v_rtype = FAT$C_STREAMLF;  /* Unix I/O happy */
               else
@@ -337,6 +473,26 @@ typedef unsigned long addr_type;
 	      Fat.fat$w_ffbyte = *(int *)ptr % 512;
 	      break;
 
+          case SET_MODE:
+              /* Set file protection from a UNIX-style mode value.
+               * System protection = owner protection.
+               * Delete protection = write protection, except for a
+               * directory, for which delete protection (permission) is
+               * always inhibited.
+               */
+              is_dir = ((uchar.lword& FCH$M_DIRECTORY) != 0);
+              mode = *(mode_t *)ptr;
+              prot.bits.world = prot_of_perm[ is_dir][(mode>> 0)& 7];
+              prot.bits.group = prot_of_perm[ is_dir][(mode>> 3)& 7];
+              prot.bits.owner = prot_of_perm[ is_dir][(mode>> 6)& 7];
+              prot.bits.system = prot.bits.owner;
+              break;
+
+          case SET_PROT:
+              /* Set file protection from a VMS protection value. */
+              prot.value = *(unsigned short int *)ptr;
+              break;
+
           default:
               return SS$_BADPARAM;   /* anything better? */
         }
@@ -346,23 +502,11 @@ typedef unsigned long addr_type;
       -----------------------------------------------------------------------*/
 
         /* note, part of the FIB was cleared by earlier QIOW, so reset it */
-#ifndef __DECC
-        Fib.fib$r_acctl_overlay.fib$l_acctl = FIB$M_NORECORD;
-#else
-        Fib.fib$l_acctl = FIB$M_NORECORD;
-#endif
-        for (i=0;i<3;i++)
-#ifndef __DECC
-            Fib.fib$r_fid_overlay.fib$w_fid[i]=Nam.nam$w_fid[i];
-#else
-            Fib.fib$w_fid[i]=Nam.nam$w_fid[i];
-#endif
-        for (i=0;i<3;i++)
-#ifndef __DECC
-            Fib.fib$r_did_overlay.fib$w_did[i]=Nam.nam$w_did[i];
-#else
-            Fib.fib$w_did[i]=Nam.nam$w_did[i];
-#endif
+        Fib.FIB$L_ACCTL = FIB$M_NORECORD;
+        for (i=0;i<3;i++) {
+            Fib.FIB$W_FID[i]=Nam.NAMX_W_FID[i];
+            Fib.FIB$W_DID[i]=Nam.NAMX_W_DID[i];
+        }
 
         /* Use the IO$_MODIFY function to change info about the file */
         /* Note, used this way, the file is not opened, however this would */
@@ -373,74 +517,48 @@ typedef unsigned long addr_type;
         if (!(status & 1))
 	  {
 	    sys$dassgn(DevChan);
-#ifdef debug
-	    printf("vmsmunch() returns after IO$_MODIFY with status %u\n",
-		   status);
+#ifdef DEBUG
+	    fprintf( stderr,
+             "vmsmunch() returns after IO$_MODIFY with status %%x%08x\n",
+             status);
 #endif
-	    return(status);
+	    return status;
 	  }
 
         status = iosb[0];
         if (!(status & 1))
 	  {
 	    sys$dassgn(DevChan);
-#ifdef debug
-	    printf("vmsmunch() returns after IO$_MODIFY with status %u\n",
-		   status);
+#ifdef DEBUG
+	    fprintf( stderr,
+             "vmsmunch() returns after IO$_MODIFY with status %%x%08x\n",
+             status);
 #endif
-	    return(status);
+	    return status;
 	  }
 
         status = sys$dassgn(DevChan);
-        if (!(status & 1)) 
+        if (!(status & 1))
 	  {
-#ifdef debug
-	    printf("vmsmunch() returns after sys$dassgn() with status %u\n",
-		   status);
+#ifdef DEBUG
+	    fprintf( stderr,
+             "vmsmunch() returns after sys$dassgn() with status %%x%08x\n",
+             status);
 #endif
-	    return(status);
+	    return status;
 	  }
+
+#if 0
+        /* 2010-11-31 SMS.
+         * We don't want a $SEARCH() loop, or a "%RMS-E-NMF, no more
+         * files found" return status value.
+         */
 
         /* look for next file, if none, no big deal.. */
         status = sys$search(&Fab);
+#endif /* 0 */
+
+        return status;
     }
 } /* end function VMSmunch() */
 
-
-
-
-
-/***********************/
-/*  Function bintim()  */
-/***********************/
-
-void asctim(time,binval)   /* convert 64-bit binval to string, put in time */
-    char *time;
-    long int binval[2];
-{
-    static struct dsc$descriptor date_str={23,DSC$K_DTYPE_T,DSC$K_CLASS_S,0};
-      /* dsc$w_length, dsc$b_dtype, dsc$b_class, dsc$a_pointer */
- 
-    date_str.dsc$a_pointer = time;
-    sys$asctim(0, &date_str, binval, 0);
-    time[23] = '\0';
-}
-
-
-
-
-
-/***********************/
-/*  Function bintim()  */
-/***********************/
-
-void bintim(time,binval)   /* convert time string to 64 bits, put in binval */
-    char *time;
-    long int binval[2];
-{
-    static struct dsc$descriptor date_str={0,DSC$K_DTYPE_T,DSC$K_CLASS_S,0};
-
-    date_str.dsc$w_length = strlen(time);
-    date_str.dsc$a_pointer = time;
-    sys$bintim(&date_str, binval);
-}

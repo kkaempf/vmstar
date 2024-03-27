@@ -10,16 +10,21 @@
 
 extern struct tarhdr header;
 
-extern char buffer[RECSIZE];             /* buffer for a tarfile record */
+extern
+char buffer[BUFFERSIZE];        /* buffer for tarfile and output record */
 
 extern
-char pathname[NAMSIZE],		/* File name as found on tape (UNIX) */
-     curdir[32767],		/* Current directory */
-     new_directory[32767],	/* Directory of current file */
-     newfile[32767],		/* VMS format of file name */
-     outfile[32767],		/* Complete output file specification */
-     temp[32767],		/* Scratch */
+char pathname[ T_NAM_LEN+ 1],	/* File name as found on tape (UNIX) */
+     curdir[ T_NAM_LEN+ 1],	/* Current directory */
+     new_dir[ T_NAM_LEN+ 1],	/* Directory of current file */
+     newfile[ T_NAM_LEN+ 1],	/* VMS format of file name */
+     outfile[ T_NAM_LEN+ 1],	/* Complete output file specification */
+     temp[ T_NAM_LEN+ 1],	/* Scratch */
      creation[30],		/* Date as extracted from the TAR file */
-     linkname[32767];		/* Linked file name  */
+     linkname[T_NAM_LEN+ 1];	/* Linked file name  */
+
+extern int linkname_len;
+extern int pathname_len;
+
 
 #endif /* LOADED_VMSTARP_H */

@@ -1,5 +1,5 @@
 	Module		VMSTAR_CLITABLES
-	Ident		"01-005"
+	Ident		"01-007"
 !+
 !
 !  VMSTAR_CLITABLES
@@ -9,6 +9,11 @@
 !
 !  Modified by:
 !
+!	01-007		Steven Schweda		13-NOV-2010 11:15
+!		Added /SYMLINKS, /UNDERDOT.
+!		Removed dummy parameter (P3) to avoid CLI code ignoring
+!		a space-separated parameter.  UNIX-style command line
+!		now usually needs "-" prefix for its options.
 !	01-006		Patrick Young		02-OCT-2001 11:37
 !		Added /ODS2
 !	01-005		Richard Levitte		18-OCT-1994 09:54 CET
@@ -34,28 +39,35 @@ Define	Type		DATE_POLICY_KEYWORDS
 	Keyword		ALL, Negatable, Default
 
 Define	Verb		VMSTAR
-	Parameter	P1, Label=TARFILE, Prompt="TAR file"
-	Parameter	P2, Label=INFILE, VALUE(LIST), Prompt="Files to TAR"
-	Parameter	P3, Label=DUMMY, Prompt=""
-	Qualifier	EXTRACT, NonNegatable
-	Qualifier	HELP, NonNegatable
-	Qualifier	LIST, NonNegatable
-	Qualifier	CREATE, NonNegatable
-	Qualifier	VERBOSE, NonNegatable
-	Qualifier	CONFIRM, NonNegatable
-	Qualifier	BINARY, NonNegatable
+	Parameter	P1, Label=TARFILE, Prompt="Tar archive"
+	Parameter	P2, Label=INFILE, VALUE(LIST),
+			 Prompt="Member files or patterns"
+!!!	Parameter	P3, Label=DUMMY1, Prompt=""       ! Extra for b.
+!!!	Parameter	P4, Label=DUMMY2, Prompt=""       ! Extra for f.
+
 	Qualifier	AUTOMATIC, NonNegatable
-	Qualifier	DOTS, NonNegatable
-	Qualifier	ODS2, Negatable
-	Qualifier	DATE_POLICY, Value(List, Type=DATE_POLICY_KEYWORDS),
-			NonNegatable
-	Qualifier	FORCE, Negatable
-	Qualifier	PADDING, Negatable, Default
+	Qualifier	BINARY, NonNegatable
 	Qualifier	BLOCK_FACTOR, Value(Type=$NUMBER, Required),
 			NonNegatable
+	Qualifier	CONFIRM, NonNegatable
+	Qualifier	CREATE, NonNegatable
+	Qualifier	DATE_POLICY, Value(List, Type=DATE_POLICY_KEYWORDS),
+			NonNegatable
+	Qualifier	DOTS, NonNegatable
+	Qualifier	EXTRACT, NonNegatable
+	Qualifier	FORCE, Negatable
+	Qualifier	HELP, NonNegatable
+	Qualifier	LIST, NonNegatable
+	Qualifier	ODS2, Negatable
+	Qualifier	PADDING, Negatable, Default
+	Qualifier	SYMLINKS, Negatable
+	Qualifier	UNDERDOT, Negatable
+	Qualifier	VERBOSE, Value(Type=$NUMBER), NonNegatable
 	Qualifier	YYZ, NonNegatable, Default
+
 	Disallow	CREATE and (EXTRACT or LIST or AUTOMATIC or BINARY
-						or ODS2)
+						or ODS2 or SYMLINKS)
+	Disallow	BLOCK_FACTOR and LIST
 	Disallow	AUTOMATIC and BINARY
 	Disallow	LIST and (CREATE or EXTRACT or BINARY or AUTOMATIC
 			or DOTS or CONFIRM or FORCE or PADDING or ODS2)

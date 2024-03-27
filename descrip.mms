@@ -1,99 +1,200 @@
-# Description file for VMSTAR.
+#                                               24 February 2009.  SMS.
+#
+#    VMSTAR 3.5 for VMS - MMS (or MMK) Description File.
+#
+# Usage:
+#
+#    MMS /DESCRIP = DESCRIP.MMS [/MACRO = (<see_below>)] [target]
+#
+# Optional macros:
+#
+#    "CCOPTS=xxx"   Compile with CC options xxx.  For example:
+#                   "CCOPTS=/ARCH=HOST"
+#
+#    DBG=1          Compile with /DEBUG /NOOPTIMIZE.
+#                   Link with /DEBUG /TRACEBACK.
+#                   (Default is /NOTRACEBACK.)
+#
+#    LARGE=1        Enable large-file (>2GB) support.  Non-VAX only.
+#
+#    "LINKOPTS=xxx" Link with LINK options xxx.  For example:
+#                   "LINKOPTS=/NOINFO"
+#
+#    LIST=1         Compile with /LIST /SHOW = (ALL, NOMESSAGES).
+#                   Link with /MAP /CROSS_REFERENCE /FULL.
+#
+#    "LOCAL_VMSTAR= c_macro_1=value1 [, c_macro_2=value2 [...]]"
+#                   Compile with these additional C macros defined.
+#
+# VAX-specific optional macros:
+#
+#    VAXC=1         Use the VAX C compiler, assuming "CC" runs it.
+#                   (That is, DEC C is not installed, or else DEC C is
+#                   installed, but VAX C is the default.)
+#
+#    FORCE_VAXC=1   Use the VAX C compiler, assuming "CC /VAXC" runs it.
+#                   (That is, DEC C is installed, and it is the
+#                   default, but you want VAX C anyway, you fool.)
+#
+#
+# The default target, ALL, builds the selected product executables and
+# help files.
+#
+# Other targets:
+#
+#    CLEAN      deletes architecture-specific files, but leaves any
+#               individual source dependency files and the help files.
+#
+#    CLEAN_ALL  deletes all generated files, except the main (collected)
+#               source dependency file.
+#
+#    CLEAN_EXE  deletes only the architecture-specific executables.
+#               Handy if all you wish to do is re-link the executables.
+#
+# Example commands:
+#
+# To build the conventional small-file product using the DEC/Compaq/HP C
+# compiler (Note: DESCRIP.MMS is the default description file name.):
+#
+#    MMS
+#
+# To get the large-file executables (on a non-VAX system):
+#
+#    MMS /MACRO = (LARGE=1)
+#
+# To delete the architecture-specific generated files for this system
+# type:
+#
+#    MMS /MACRO = (LARGE=1) CLEAN               ! Large-file.
+# or
+#    MMS CLEAN                                  ! Small-file.
+#
+# To build a complete small-file product for debug with compiler
+# listings and link maps:
+#
+#    MMS CLEAN
+#    MMS /MACRO = (DBG=1, LIST=1)
+#
+########################################################################
 
-# include version.opt, since that gives us information like version number.
-.include version.opt
+# Include primary product description file.
 
-CFLAGS = /DEBUG
+INCL_DESCRIP_SRC = 1
+.INCLUDE DESCRIP_SRC.MMS
 
-LD = link
-#LDFLAGS = /DEBUG
-LDFLAGS = /NOTRACE
 
-# if you want to put the executable and object files at some specific place,
-# change this macro
-GOAL=
+# Help file name.
 
-# All the files we distribute
-DISTFILES = aaa*.txt Changelog.* *.rnh *.hlp *.com *.*mms *.cld *.c *.h *.opt
+VMSTAR_HLP = VMSTAR.HLP
 
-# Some files we distribute in the .zip archive file.
-ZIPDISTEXTRA = *.*_obj *.*_opt
 
-all : setup vmstar.hlp
-	$(MMS) $(MMSQUALIFIERS) /DESCRIPTION=DESCRIP.COMMON_MMS -
-		/MACRO=(CFLAGS="''all_cflags'",LD="$(LD)",LDFLAGS="$(LDFLAGS)",GOAL="$(GOAL)",LIB="''lib'",EXT="''ext'",EXE_EXT="''exe_ext'"'do_option') 
+# TARGETS.
 
-setup :
-	__arch = f$getsyi("ARCH_TYPE")
-	__tmp = f$edit("$(CFLAGS)","UPCASE")
-	__decc = f$search("SYS$SYSTEM:DECC$COMPILER.EXE") .nes. "" -
-		.and. __tmp - "/VAXC" .eqs. __tmp
-	ext = "VAX_"
-	if __arch .eq. 2 then ext = "ALPHA_"
-	if __arch .eq. 3 then ext = "I64_"
-	exe_ext = ext
-	if .not. __decc then ext = ext + "VAXC_"
-	lib = "SYS$SHARE:VAXCRTL/SHARE"
-	do_option = ""
-	all_cflags = "$(CFLAGS)/DEFINE=VERSION="""""""""""$(ident)""""""""""""
-	if .not. __decc then -
-		do_option = ",OPTION=""$(GOAL)VMSTAR.''ext'OPT"",OPTIONCMD="",$(GOAL)VMSTAR.''ext'OPT/OPT"""
-	if __decc then all_cflags = "/DECC/PREFIX=ALL " + all_cflags
-	if __decc .and. (__arch .gt. 1) then all_cflags = all_cflags + "/L_DOUBLE=64"
+# Default target, ALL.  Build all executables and help files.
 
-vmstar.hlp : vmstar.rnh
-	runoff vmstar.rnh
+ALL : $(VMSTAR_EXE) $(VMSTAR_HLP)
+	@ write sys$output "Done."
 
-mostlyclean :
-	- delete/log *.*_obj;*
-	- delete/log *.*_opt;*
-	- purge/log
+# CLEAN target.  Delete the [.$(DEST)] directory and everything in it.
 
-clean : mostlyclean
-	- delete/log *.*_exe;*
-	- delete/log *.hlp;*
-	- delete/log zip.*;*
+CLEAN :
+	if (f$search( "[.$(DEST)]*.*") .nes. "") then -
+	 delete [.$(DEST)]*.*;*
+	if (f$search( "$(DEST).dir") .nes. "") then -
+	 set protection = w:d $(DEST).dir;*
+	if (f$search( "$(DEST).dir") .nes. "") then -
+	 delete $(DEST).dir;*
 
-dist_tar : setup versions FRC
-	- mcr sys$disk:[]vmstar.'exe_ext'exe -cvf vmstar'vmsver'.tar $(DISTFILES)
+# CLEAN_ALL target.  Delete:
+#    The [.$(DEST)] directories and everything in them.
+#    All help-related derived files,
+#    All individual C dependency files.
+# Also mention:
+#    Comprehensive dependency file.
+#
+CLEAN_ALL :
+	if (f$search( "[.ALPHA*]*.*") .nes. "") then -
+	 delete [.ALPHA*]*.*;*
+	if (f$search( "ALPHA*.dir", 1) .nes. "") then -
+	 set protection = w:d ALPHA*.dir;*
+	if (f$search( "ALPHA*.dir", 2) .nes. "") then -
+	 delete ALPHA*.dir;*
+	if (f$search( "[.IA64*]*.*") .nes. "") then -
+	 delete [.IA64*]*.*;*
+	if (f$search( "IA64*.dir", 1) .nes. "") then -
+	 set protection = w:d IA64*.dir;*
+	if (f$search( "IA64*.dir", 2) .nes. "") then -
+	 delete IA64*.dir;*
+	if (f$search( "[.VAX*]*.*") .nes. "") then -
+	 delete [.VAX*]*.*;*
+	if (f$search( "VAX*.dir", 1) .nes. "") then -
+	 set protection = w:d VAX*.dir;*
+	if (f$search( "VAX*.dir", 2) .nes. "") then -
+	 delete VAX*.dir;*
+	if (f$search( "*.MMSD") .nes. "") then -
+	 delete *.MMSD;*
+	if (f$search( "$(VMSTAR_HLP)") .nes. "") then -
+	 delete $(VMSTAR_HLP);*
+	@ write sys$output ""
+	@ write sys$output "Note:  This procedure will not"
+	@ write sys$output "   DELETE DESCRIP_DEPS.MMS;*"
+	@ write sys$output -
+ "You may choose to, but a recent version of MMS (V3.5 or newer?) is"
+	@ write sys$output -
+ "needed to regenerate it.  (It may also be recovered from the original"
+	@ write sys$output -
+ "distribution kit.)  See DESCRIP_MKDEPS.MMS for instructions on"
+	@ write sys$output -
+ "generating DESCRIP_DEPS.MMS."
+        @ write sys$output ""
 
-dist_zip : versions zip.comment FRC
-	- define/user sys$input zip.comment
-	- define/user sys$output zip.log
-	- zip -"Vz" vmstar'vmsver'.zip $(DISTFILES) $(ZIPDISTEXTRA)
+# CLEAN_EXE target.  Delete the executables in [.$(DEST)].
 
-zip_src : versions zip.comment FRC
-	- define/user sys$input zip.comment
-	- define/user sys$output zip.log
-	- zip -"z" vmstar'vmsver'.zip $(DISTFILES)
+CLEAN_EXE :
+        if (f$search( "[.$(DEST)]*.EXE") .nes. "") then -
+         delete [.$(DEST)]*.EXE;*
 
-versions : version.opt FRC
-	@- ! open/read foo version.opt
-	@- ! read foo line		! the name
-	@- ! read foo line		! the ident
-	@- ! close foo
-	@ ! version = f$extract(1,10,f$element(1,"""",line))
-	version = f$extract(1,10,$(ident))
-	major = f$element(0,".",version)
-	minor = f$element(0,"-",f$element(1,".",version))
-	update = f$element(0," ",f$element(1,"-",version))
-	testword = f$element(1," ",version)
-	vmsver = "0''major'''minor'"
-	if major .gt. 9 then vmsver = "''major'''minor'"
-	if update .nes. "-" then vmsver = "U''update'"+vmsver
-	if testword .nes. " " then vmsver = vmsver+"-"+testword
-	
-zip.comment : version.opt descrip.mms
-	- open/write foo zip.comment
-	- write foo " "
-	- write foo "VMSTAR ''version' -- Read and write UN*X tar files under VMS"
-	- write foo " "
-	- write foo "Runs on both OpenVMS/VAX and OpenVMS/AXP."
-	- write foo " "
-	- write foo "To get the executable, just do @LINK after you extracted"
-	- write foo "the files."
-	- write foo " "
-	- close foo
 
-FRC :
-	@ ! This clause is to force other clauses to happen.
+# Default C compile rule.
+
+.C.OBJ :
+        $(CC) $(CFLAGS) $(MMS$SOURCE)
+
+# VAX C LINK options file.
+
+.IFDEF OPT_FILE_CRTL
+$(OPT_FILE_CRTL) :
+	create /fdl = STREAM_LF.FDL $(MMS$TARGET)
+        open /read /write opt_file_ln $(MMS$TARGET)
+        write opt_file_ln "SYS$SHARE:VAXCRTL.EXE /SHARE"
+        close opt_file_ln
+.ENDIF
+
+# Object list options file.
+
+$(OPT_FILE_MODS_OBJS) :
+	@LIST_TO_OPT.COM "VMSTAR" "$(MMS$TARGET)" "$(MODS_OBJS_VMSTAR)"
+
+# VMSTAR executable.
+
+$(VMSTAR_EXE) : $(MODS_OBJS_VMSTAR) $(VMSTAR_CLD_OBJ) \
+                $(OPT_FILE_CRTL) $(OPT_FILE_MODS_OBJS)
+	$(LINK) $(LINKFLAGS) $(OPT_FILE_MODS_OBJS) /options, -
+	 $(VMSTAR_CLD_OBJ) $(LINKFLAGS_ARCH)
+
+# Help file.
+
+$(VMSTAR_HLP) : VMSTAR.RNH
+        RUNOFF /OUTPUT = $(MMS$TARGET) $(MMS$SOURCE)
+
+# CLI table object.
+
+$(VMSTAR_CLD_OBJ) : VMSTAR_CLD.CLD
+	SET COMMAND /OBJECT = $(MMS$TARGET) $(MMS$SOURCE)
+
+
+# Include generated source dependencies.
+
+INCL_DESCRIP_DEPS = 1
+.INCLUDE DESCRIP_DEPS.MMS
+

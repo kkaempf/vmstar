@@ -1,3 +1,179 @@
+Fri Dec 31 16:00:00 2010  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre12.  Changed to use actual archived file permissions
+        to determine protections of extracted files (and directories).
+        Directory protections are set after all files have been
+        extracted (and symlinks created).
+
+        * Changed symlink creation from immediate to deferred, closing a
+        security vulnerability where a malicious archive could be used
+        to spew extracted files to any place in the file system.  Now,
+        symlinks are created after all files have been extracted.
+
+Sat Nov 27 16:00:00 2010  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre11.  Changed UNIX-style option processing to allow
+        more than one "-" option block.  For example, "-t -f fred.tar
+        -v", instead of "-tfv fred.tar".  This allows a user to define a
+        DCL symbol which includes UNIX-style options.  For example:
+        vmstar == "$ dev:[dir]vmstar.exe -d"
+
+        * Removed most usage() output after command-line errors.
+
+Mon Nov 23 16:00:00 2010  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre10.  Changed to use actual file protections to
+        determine modes in an archive.  Formerly, directories always got
+        mode 755 (rwxr-xr-x), and plain files got 644 (rw-r--r--).
+        Define the C macro CONSTANT_MODE at build time to get the old
+        behavior.  (VMS2TAR.C.)
+
+        * Changed exit() status values to other than SS$_NORMAL when an
+        error condition is detected.
+
+        * Changed to send error messages to stderr instead of stdout.
+
+        * Changed the return/exit status from main() to inhibit the
+        traceback after an error.  (VMSTAR.C.)
+
+        * Extended /DOTS ("d") to archive extraction, to control
+        conversion of dots to underscores in directory names.
+        (TAR2VMS.C.)
+
+        * Extended the /ODS2 ("o") option to archive creation, causing
+        ODS5 names to be down-cased as ODS2 names would be, if desired.
+        (VMS2TAR.C.)
+
+        * Added more ODS5 long-name (NAML) code to TAR2VMS.C.
+
+        * Fixed problems (missing NUL termination) with 100-character
+        names in TAR2VMS.C and VMS2TAR.C.
+
+        * Added RMS$_DIR to the list of correctable error codes when
+        creating a directory.  (TAR2VMS.C.)
+
+        * Inlined one-use function opentar() in TAR2VMS.C.
+
+        * Changed /CONFIRM ("w") code to use a default response when the
+        user provides a null response.  Added "All" and "Quit" options in
+        /CREATE ("c") mode, matching the behavior for /EXTRACT ("x") and
+        /LIST ("t").  (TAR2VMS.C, VMS2TAR.C.)
+
+        * Fixed a problem with "[000000]" reduction in archive creation.
+        (VMS2TAR.C.)
+
+        * Trying to add a file with an unsupported record format to an
+        archive was fatal to the whole job instead of only to that one
+        file's addition.  (VMS2TAR.C.)
+
+        * Added UNIX-style options "D" for /DATE_POLICY, "F" for /FORCE,
+        and "p" for /PADDING.  (VMSTAR_CMDLINE.C.)
+
+        * Changed to allow a lone /VERBOSE ("v") option to show the
+        program version.  (VMSTAR_CMDLINE.C.)
+
+        * Restructured and simplified get_list() code in
+        VMSTAR_CMDLINE.C, (fixing the malloc() of one byte too few).
+        Conditionally (CASE_CNVT) disabled the down-casing code.
+
+        * Removed "DUMMY" parameters from the CLI definition, so that
+        non-comma-separated filespec parameters in a VMS-style command
+        will trigger a complaint, instead of being silently ignored.
+        This change has a side effect of requiring a "-" prefix on a
+        UNIX-style options string in most cases.  (VMSTAR_CLD.CLD.)
+
+        * Condensed the usage() help text.  (VMSTAR_CMDLINE.C.)
+
+        * Miscellaneous code reform: "long" -> "int", more function
+        prototypes, more consistent indentation, more comments, ...
+
+Tue Apr 27 17:00:00 2010  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre9.  Fixed a problem with VMS-to-UNIX directory name
+        conversion for ODS5 directory names containing a dot.  For
+        example, "[.a^.b]" would be archived as "a/b/" instead of
+        "a.b/".  Fixed another problem with trailing-dot removal, where
+        a file named "." would be archived with a null name.  (An ACCVIO
+        was also possible.)  Names "." and ".." should probably be
+        disallowed, or else replaced by more UNIX-friendly names, as is
+        done in Info-ZIP Zip+UnZip.  Both problems were in VMS2TAR.C:
+        scan_name().
+
+Wed Apr 07 23:00:00 2010  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre8.  Fixed an attribute-setting problem in VMSMUNCH.C:
+        VMSmunch(), affecting files with ODS5 extended file names.
+
+Fri Oct 02 18:00:00 2009  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre7.  Changed to use 0x80 (not 0x00) as the first byte
+        in a GNU-tar-like binary size.
+
+Thu Oct 01 18:00:00 2009  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre6.  Changed to use cleanup_dire() to simplify the
+        current default directory specification (internally), to ensure
+        proper reduction of relative directory specifications in archive
+        path names.  (For example, functionally equivalent default
+        directory specs like "[000000.a.b]" and "[a.b]" could lead to
+        different archive path names.)
+
+        * Changed to accept either 0x00 or 0x80 as the first byte in a
+        GNU-tar-like binary size.
+
+        * Added TAR2VMS support for Sun-tar -E extensions (header
+        linkflag = LF_VU_XHDR) for large file sizes and mtimes with
+        fractional seconds.  (Microseconds are rounded to centiseconds.)
+
+        * Disambiguated some "error reading tar file" error messages,
+        and changed the exit status from SS$_NORMAL to SS$_DATALOST for
+        some error conditions.
+
+Wed May 06 16:00:00 2009  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre5.  Changed tar header checksum calculations to use
+        unsigned arithmetic, to agree with the POSIX standard.  When
+        reading an archive, either checksum will be accepted.  This
+        should eliminate spurious "directory checksum error" messages
+        for archives where a high (sign) bit was set in the header data.
+        (Unlucky file permission codes, or file names with ASCII codes
+        greater than 127 (or less than zero, depending on your point of
+        view) could reveal the problem.)
+
+Tue Feb 24 17:02:32 2009  Steven Schweda <sms@antinode.info>
+
+        * V3.5-pre4.  Fixed a problem (ACCVIO) in VMS2TAR.C (V3.5-pre3)
+        for file names on an ODS5 disk.
+
+        * Added /UNDERDOT ("u") option, to change the dot replacement
+        scheme used for multi-dot file names being restored to an ODS2
+        disk.  That is, "a.b.c" -> "A_B.C", instead of "A.B_C".
+
+Wed Nov 05 13:31:05 2008  Steven Schweda <sms@antinode.info>
+
+	* V3.5-pre3.  Changed error handling in TAR2VMS.C to continue
+        processing after an output error (for example, a too-long name
+        on an ODS2 disk).
+
+Thu Jan 03 15:03:11 2007  Steven Schweda <sms@antinode.org>
+
+	* V3.5-pre2.  New MMS/MMK builders with automatic dependency
+	generation.  Minor source changes to accomodate old DEC C
+        compilers.  Large-file support must be requested explicitly when
+        building.  (See comments in DESCRIP.MMS.)
+
+Thu Jun 07 02:35:03 2007  Steven Schweda <sms@antinode.org>
+
+	* V3.5-pre1.  Changed to handle some ODS5 cases better,
+	including symbolic links and GNU-tar-like extensions for long
+	file names.  Added /SYMLINKS ("s") to enable symlinks to be
+	extracted as real symlinks.  Added large file support, where the
+	C RTL has it, including GNU-tar-like binary size (instead of
+	octal) for files bigger than 8GB.  Separated "b" (block_factor)
+	and "B" (binary) options, and changed UNIX-style command-line
+	parsing to allow "b" and "f" together (and "f" no longer needs
+	to be last).  Could have broken any number of things.
+
 Thu Nov 29 22:16:20 2001  Hunter Goatley <goathunter@goatley.com>
 
 	* Packaged for release as VMSTAR V3.4-1.  Separate binaries for
@@ -428,15 +604,15 @@ Thu Apr 28 22:22:?? 1994  Richard Levitte  (levitte@e.kth.se)
 	* Version 2.0-1 released.
 
 	* vmstar.c:  removed the `D' option, when I saw that I could use
-	the `d' option. 
+	the `d' option.
 
 Thu Apr 28 07:07:?? 1994  Hunter Goatley  (goathunter@alpha.wku.edu)
 
 	* vmstar_cmdline.c, vmstar_cld.cld:  new file.  Adds the VMS-style
-	CLI interface, in addition to UNIX-style options. 
+	CLI interface, in addition to UNIX-style options.
 
 	* vmstar.c (tar2vms): modified /CONFIRM loop to allow "q" and
-	CTRL-Z for quit. 
+	CTRL-Z for quit.
 
 ??? ??? ?? ??:??:?? 1994  Richard Levitte  (levitte@e.kth.se)
 
