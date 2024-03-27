@@ -1,0 +1,20 @@
+Here's the list of stuff that should be added to VMSTAR:
+
+Short term (please concentrate on this first):
+
+	* Make VMSTAR recognise text files that have variable length
+	records and no record attributes.
+
+	* Qualifiers for VMSTAR to specify the block factor size
+	(currently, 20 is hardcoded.  This gives 10240 byte blocks.
+	This should only be a default...)
+
+Long term:
+
+	* Capability to mount the device to which the tar dump will be
+	written, if it isn't already mounted.
+
+	* Capability to tell the user to mount a new tape if the tar
+	dump takes more than one.
+
+More things could be added with time.

@@ -1,0 +1,369 @@
+Tue Sep 13 15:57:28 1994  Richard Levitte  (LEVITTE@eliza.e.kth.se)
+
+	* Version 3.2-5 released.
+
+	* descrip.mms, build.com: added `*.hlp' to DISTFILES.
+	(all): adds "/L_DOUBLE=64" to all_cflags if on AXP, to make
+	sure it can be linked with the library for AXP DEC C version 1.3.
+	(versions): renamed from zip.version.
+	(dist_tar): depends on versions.
+
+	* vms2tar.c (out_file): attempted to write code to recognise
+	text files when they are variable length record files with
+	no record attributes.  So far, I failed.  Added this as a
+	short term wish in aaatodo.txt.
+
+Mon Sep 12 08:18:29 1994  Richard Levitte  (LEVITTE@elmer.e.kth.se)
+
+	* vmstar_cmdline.c (get_list): len will be set to 0 if *str
+	is NULL.
+
+	* descrip.mms: extension of object files will have "VAXC_" in
+	it if compiled with VAX C.  Now also distribute object files
+	in the zip archive.
+
+	* build.com, link.com: Changed accordingly.
+
+	* version.opt: version changed to 3.2-5.
+
+Wed Sep  7 17:33:43 1994  Richard Levitte  (LEVITTE@elton.e.kth.se)
+
+	* descrip.mms (all): changed so it will recognise "/VAXC" in
+	the macro CFLAGS, and act properly in that case.
+
+Wed Sep  7 15:00:00 1994  Richard Levitte  (LEVITTE@elton.e.kth.se)
+
+	* Version 3.2-4 released.
+
+Wed Sep  7 14:42:52 1994  Richard Levitte  (LEVITTE@elton.e.kth.se)
+
+	* vmstar_cmdline.c (vmstar_cmdline): found_options now
+	initialised to 0.
+
+	* descrip.vax_mms, descrip.alpha_mms: removed.
+
+	* descrip.mms: now checks if DEC C exists, and chooses it
+	over VAX C if it does.  Now invokes descrip.common_mms
+	directly.  Two distribution clauses added.
+
+	* vmstar.rnh: a few spelling errors corrected, and a
+	Stellan Lagerström added to the "Thanks" list.
+
+	* aaatodo.txt: renamed from todo.txt.
+
+	* version.opt: version changed to 3.2-4.
+
+Mon Sep  5 09:20:00 1994  Richard Levitte  (LEVITTE@elmer.e.kth.se)
+
+	* Version 3.2-3 released.
+
+Mon Sep  5 09:19:11 1994  Richard Levitte  (LEVITTE@elmer.e.kth.se)
+
+	* vmstar.h: removed `/' from BADCHARS.
+
+	* version.opt: version changed to 3.2-3.
+
+Fri Sep  2 12:27:05 1994  Richard Levitte  (LEVITTE@eliza.e.kth.se)
+
+	* Version 3.2-2 released.
+
+Fri Sep  2 11:18:44 1994  Richard Levitte  (LEVITTE@eliza.e.kth.se)
+
+	* vmstar.c (main): Changed so there will be an error message
+	if no input files are specified with the /CREATE option.
+
+	* version.opt: version changed to 3.2-2.
+
+Thu Sep  1 22:05:45 1994  Richard Levitte  (LEVITTE@eliza.e.kth.se)
+
+	* vmsmunch.c (VMSmunch): On VAX, atr$l_addr is unsigned long.
+	On AXP, it is void *.  I fixed a workaround.  Also, for
+	SET_TIMES, only change the times that are really given.
+
+	* vmstar_cmdline.c (vmstar_cmdline): Added processing of
+	/DATE_POLICY
+
+	* vmstar_cld.cld: Added the /DATE_POLICY qualifier.
+
+	* tar2vms.c (copyfile): Set actime and modtime depending
+	on the date policy
+
+	* version.opt: version changed to 3.2-1.
+
+Thu Sep  1 11:43:57 1994  Richard Levitte  (LEVITTE@elmer.e.kth.se)
+
+	* vmstar.rnh: added help about the /DATE_POLICY qualifier.
+
+	* vms2tar.c, tar2vms.c: added dependency on vmstar_cmdline.h.
+
+	* vmstar_cmdline.c: got the Unix option parsing code that was
+	previously in vmstar.c.  Changed the VMS option parsing code
+	to set the option variables directly instead of converting them
+	to Unix options.  Changed so vmstar_clitables will only be
+	globalref with VAX C.
+
+	* vmstar_cmdline.h: got the option variables that were previously
+	in vmstarP.h.
+
+	* descrip.common_mms: Changed to reflect changes in dependency.
+
+	* version.opt: version changed to 3.2.
+
+Wed Aug 24 12:05:18 1994  Richard Levitte  (LEVITTE@elmer.e.kth.se)
+
+	* data.c, tar2vms.c, vms2tar.c, vmsmunch.c, vmstar.c,
+	vmstar_cmdline.c: changed so the module name will be set
+	right with DEC C on VAX also.
+
+	* version.opt: version changed to 3.1-3.
+
+Sat Aug 20 04:44:07 1994  Richard Levitte  (LEVITTE@eliza.e.kth.se)
+
+	* vmstar.h (BADCHARS, TRANSLATE):  added a few more forbidden
+	characters in BADCHARS, and made their translation an underscore.
+
+Sat Jul 23 17:02:40 1994  Richard Levitte  (LEVITTE@eliza.e.kth.se)
+
+	* vmstar.rnh:  added /BUFFER=512 to the qualifiers that should be
+	used when you mount a tape.
+
+	* todo.txt:  new file.
+
+	* vmsmunch.c (VMSmunch):  commented away the `revision' item from
+	the attribute list.  Otherwise, some very weird dates were placed
+	in the file header, like the expiration date
+	"15-MAR-14233 08:47:40.53".
+
+Wed Jul 20 09:02:11 1994  Richard Levitte  (levitte@oden.stacken.kth.se)
+
+	* data.c, vmstar.h, vmstarP.h:  new files.
+
+	* vms2tar.c, tar2vms.c:  new files.  Parts of vmstar.c have been
+	moved into these files.
+	* vms2tar.c (vms2tar), tar2vms.c (tar2vms):  removed the
+	dependency on as many global variables as possible.
+	* tar2vms.c:  added dependency on vmsmunch.h.
+
+	* vmsmunch.c:  added code for module identification.
+
+	* vmstar.c:  removed dependency on vmsmunch.h.
+	* vmstar.c (write_trailer):  made sure to put '\0' in all the
+	header fields.
+	* vmstar.c (main):  changed so the other modules don't need the
+	global variable `foption'.
+
+	* change_log.txt:  new file.  All logs below have been moved
+	from VMSTAR.C, where they were residing before.  The entries by
+	"unknown" are probably made by Alain Fauconnet, but I'm not sure
+	yet.
+
+Mon Jul 18 ??:??:?? 1994  Hunter Goatley  (goathunter@alpha.wku.edu)
+
+	* Version 2.1 released.
+
+	* vmsmunch.c (VMSmunch):  the size field in the elements of Atr
+	were wrongly set with sizeof(xxx).  Changed these to ATR$S_xxx.
+
+Mon Jul 18 ??:??:?? 1994  Richard Levitte  (levitte@oden.stacken.kth.se)
+
+	* vmsmunch.c (VMSmunch):  if status was other than 1, VMSmunch
+	would just return, without deassigning DevChan.  Now, deassigning
+	is done in all the places where VMSmunch returns.
+
+
+Fri Jul  1 00:35:?? 1994  Richard Levitte  (levitte@e.kth.se)
+
+	* Version 2.0-4 released.
+
+	* vmstar.c:  added the /HELP qualifier (and the Un*x `h' option),
+	and slightly cleanup the code.
+
+Thu Jun 23 ??:??:?? 1994  Richard Levitte  (levitte@e.kth.se)
+
+	* Version 2.0-3 released.
+
+	* vmstar.c (copyfile):  another small change, to preallocate the
+	space needed to store the extracted file.  This also means that
+	when the disk is too full, we will know when we try to create the
+	file, rather than when we are half through writing it.
+
+??? ??? ?? ??:??:?? 1994  Richard Levitte  (levitte@e.kth.se)
+
+	* Version 2.0-2 released.
+
+	* vmstar.c (copyfile):  small change, to allow VMSTAR to write
+	binary files with a size that is not a multiple of RECSIZE.  The
+	end of the last record is simply filled with '\0' (just in case
+	there is trash in the tar file).
+
+Thu Apr 28 22:22:?? 1994  Richard Levitte  (levitte@e.kth.se)
+
+	* Version 2.0-1 released.
+
+	* vmstar.c:  removed the `D' option, when I saw that I could use
+	the `d' option. 
+
+Thu Apr 28 07:07:?? 1994  Hunter Goatley  (goathunter@alpha.wku.edu)
+
+	* vmstar_cmdline.c, vmstar_cld.cld:  new file.  Adds the VMS-style
+	CLI interface, in addition to UNIX-style options. 
+
+	* vmstar.c (tar2vms): modified /CONFIRM loop to allow "q" and
+	CTRL-Z for quit. 
+
+??? ??? ?? ??:??:?? 1994  Richard Levitte  (levitte@e.kth.se)
+
+	* Version 1.7 released.
+
+	* vmstar.c:  I added the switch `D', to decide how dots in
+	directories should should be treated.
+	* vmstar.c (usage): updated.
+
+??? ??? ?? ??:??:?? 1994  Richard Levitte  (levitte@e.kth.se)
+
+	* Version 1.6-4 released.
+
+	* vmstar.c (vms2tar, addfile, out_file, get_attributes):  now,
+	vmstar includes empty files in the tar file.  This means that the
+	value of bytecount had to change.  It is -1 on unsupported file
+	formats.
+
+??? ??? ?? ??:??:?? 1994  Hunter Goatley  (goathunter@wkuvx1.wku.edu)
+
+	* Version 1.6-3 released.
+
+	* vmsmunch.c, vmsmunch.h:  new files, written by Jamie Hanrahan.
+	This handles the setting of datetime of the extracted files.
+
+??? ??? ?? ??:??:?? 1994  Richard Levitte  (levitte@e.kth.se)
+
+	* Version 1.6-2 released.
+
+	* vmstar.c (scan_file):  hacked to replace < and > with [ and ].
+	Otherwise, mkdir screws up trying to make the directory
+	DIR:<FOO.BAR] if you happen to stand in the directory DIR:<FOO>.
+	* vmstar.c (scan_title):  made it possible to disable the coercion
+	of `.' in directories to `_'.
+
+	* vmstar.c:  added a few include files and some forward
+	declarations to make DEC C shut up.
+
+??? ??? ?? ??:??:?? 1994  Hunter Goatley  (goathunter@wkuvx1.wku.edu)
+
+	* Version 1.6-1 released.
+
+	* vmstar.c:  minor mods to work under OpenVMS AXP (Goatley)
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.6 released.
+
+	* vmstar.c:  added 'z' option for automatic determination of file
+	type on extraction.
+	* vmstar.c (copyfile):  reworked to close files and exit on fatal
+	error.  Error status not returned, they weren't checked anyway.
+	* vmstar.c:  some code cleanup (much, much more to do...)
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.5-3 released.
+
+	* vmstar.c:  removed duplicate error message.
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.5-2 released.
+
+	* vmstar.c:  removed duplicate #include iodef.  Added write status
+	checking in copyfile and cleaned up error handling (avoids
+	duplicate messages).
+
+??? ??? ?? ??:??:?? 1994  Mark Parisi  (MPARISI@RIPPLE.JPL.NASA.GOV)
+
+	* Version 1.5-1 released.
+
+	* vmstar.c (out_file):  fixed bug in out_file: if the length of a
+	text file was an exact multiple of RECSIZE, flushout was called an
+	additional time.
+	* vmstar.c:  added some code for empty files handling.
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.5 released.
+
+	* vmstar.c (out_file):  when archiving a non-text file with
+	rfm=stream_lf, rat=cr attributes, VMSTAR truncated the file.
+	Modified out_file to more cleanly handle various RMS file formats:
+	only variable and stream_cr record formats need two passes to
+	compute the actual file size and need to be read record by record.
+	All other formats should by read buffer by buffer and written
+	as-is in the tar archive, thus out_file now fopens the file in
+	binary mode and freads buffers.  In the case of a stream_cr file,
+	if a single record cannot fit in our buffers (probably because the
+	file is non-text and has incorrect RMS attributes) out_file now
+	error exits.
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.4 released.
+
+	* vmstar.c (scan_title):  fixed a bug_title that caused VMSTAR to
+	fail on extraction of absolute tarfiles (thanks to Tom Allebrandi
+	for this one).  Also added some code to correctly handle dots in
+	directory names found in tarfile (replaced by "_")
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.3 released.
+
+	* vmstar.c (tar2vms):  changed to use standard IO calls (fopen,
+	fread) to read input tarfile in binary mode i.e. no translation of
+	RMS record attributes done by C RTL. This fixes problem reading
+	tarfiles created with rfm=fix, rat=cr.
+	* vmstar.c:  more room for file size in output formats.
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.2 released.
+
+	* vmstar.c (out_file):  fixed bug not closing input VMS file,
+	limited maximum number of files archived to FILLM quota
+	* vmstar.c (vms_cleanup):  added mapping to underscores of some
+	more characters found in Un*x file names illegal in VMS file
+	names.
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.1 released.
+
+	* vmstar.c:  reworked handling of current VMS default.
+	Will now create *relative* tarfiles (i.e. files known as "./..."
+	in tar archive directory) except when device name is specified or
+	wilcard search gives filenames located above current default (tar
+	cvf foo.tar [-...]*.* will lead to this kind of situation)
+	* vmstar.c (make_new):  attempt to handle more than 8 levels of
+	directories upon extract : .../d7/d8/d9 will be mapped to
+	[...D7.D8$D9].  Also greatly simplified because mkdir() creates
+	intermediate levels of directories if missing.
+
+??? ??? ?? ??:??:?? 1994  unknown  (unknown@unknown)
+
+	* Version 1.0 released.
+
+	* vmstar.c:  new file.  Merged  VMS2TAR and TAR2VMS which were
+	written by Sid Penstone.
+	Code reworked, messages cleaned up.
+	Added support for 'f tarfile' option, changed default to $TAPE.
+	Added support for VMS style wildcard file names on extract.
+	Added support for 'b' (binary file extract) option.
+	Suppressed usage of intermediate scratch file for create
+	operation.
+	File list on create should now be space separated (removed
+	difficult support of comma-separated list with context "a la
+	BACKUP").
+	Global code simplification attempt, may have broken some odd case
+	handling.
+	Added some error handling in tarfile write operations.
+	Probably millions of bugs introduced... sorry.
+
+

@@ -1,0 +1,99 @@
+This was the original modification history which could be found in vmstar.c.
+
+ * Modification history:
+ *
+ * 2.1	 - Various modifications to vmsmunch.c.  (Levitte, Goatley,
+	   18-JUL-1994 14:56)
+ * 2.0-4 - Added the /HELP qualifier (and the Un*x `h' option), and slightly
+ *         cleanup the code.  (Richard Levitte, 1-JUL-1994 00:35 CET)
+ * 2.0-3 - Another small change, to preallocate the space needed to store
+ *         the extracted file.  This also means that when the disk is too
+ *         full, we will know when we try to create the file, rather than
+ *         when we are half through writing it.
+ *         (Richard Levitte, 23-JUN-1994)
+ * 2.0-2 - Small change, to allow VMSTAR to write binary files with a size
+ *         that is not a multiple of RECSIZE.  The last record is simply
+ *         filled with '\0' (just in case there is trash in the tar file).
+ *         (Richard Levitte, time of change lost)
+ * 2.0-1 - Removed the `D' option, when I saw that I could use the `d' option.
+ *	   (Richard Levitte, 28-APR-1994 22:22 CET)
+ * 2.0	 - Added VMS-style CLI interface, in addition to UNIX-style options.
+ *	   Modified /CONFIRM loop to allow "q" and CTRL-Z for quit.
+ *	   (Hunter Goatley, 28-APR-1994 07:07)
+ * 1.7-0 - I added the switch `D', to decide how dots in directories should
+ *         should be treated.  Updated the usage() function as well.
+ *         (Richard Levitte)
+ * 1.6-4 - Now, vmstar includes empty files in the tar file.  This means
+ *         that the value of bytecount had to change.  It is -1 on
+ *         unsupported file formats.  (Richard Levitte)
+ * 1.6-3 - Merged VMSmunch stuff from Jamie Hanrahan.  (Hunter Goatley)
+ * 1.6-2 - hacked scan_file to replace < and > with [ and ].  Otherwise,
+ *         mkdir screws up trying to make the directory DIR:<FOO.BAR] if
+ *         you happen to stand in the directory DIR:<FOO>.  (Richard Levitte)
+ *       - Made it possible to disable the coercion of `.' in directories
+ *         to `_'. (Richard Levitte)
+ *       - added a few include files and some forward declarations to make
+ *         DEC C shut up. (Richard Levitte)
+ * 1.6-1 - Minor mods to work under OpenVMS AXP (Goatley)
+ * 1.6-0 - added 'z' option for automatic determination of file type on
+ *         extraction
+ *       - reworked copyfile() to close files and exit on fatal error -
+ *         error status not returned, they weren't checked anyway
+ *	 - some code cleanup (much, much more to do...)
+ * 1.5-3 - removed duplicate error message
+ * 1.5-2 - removed duplicate #include iodef
+ *       - added write status checking in copyfile and cleaned up error
+ *         handling (avoids duplicate messages)
+ * 1.5-1 - fix by Mark Parisi <MPARISI@RIPPLE.JPL.NASA.GOV>
+ *         fixed bug in out_file: if the length of a text file was an
+ *         exact multiple of RECSIZE, flushout was called an additional
+ *         time.
+ *       - added some code for empty files handling.
+ * 1.5  - when archiving a non-text file with rfm=stream_lf, rat=cr
+ *        attributes, VMSTAR truncated the file. Modified out_file
+ *        to more cleanly handle various RMS file formats: only
+ *        variable and stream_cr record formats need two passes to compute 
+ *        the actual file size and need to be read record by record.
+ *        All other formats should by read buffer by buffer and written
+ *        as-is in the tar archive, thus out_file now fopens the file
+ *        in binary mode and freads buffers.
+ *        In the case of a stream_cr file, if a single record cannot fit in
+ *        our buffers (probably because the file is non-text and has
+ *        incorrect RMS attributes) out_file now error exits.
+ * 1.4	- fixed a bug in scan_title that caused VMSTAR to fail on
+ *	  extraction of absolute tarfiles (thanks to Tom Allebrandi
+ *	  for this one)
+ *	- added some code in scan_title to correctly handle dots in
+ *	  directory names found in tarfile (replaced by "_")
+ * 1.3  - changed tar2vms to use standard IO calls (fopen, fread) to
+ *        read input tarfile in binary mode i.e. no translation of
+ *        RMS record attributes done by C RTL. This fixes problem reading
+ *        tarfiles created with rfm=fix, rat=cr
+ *      - more room for file size in output formats
+ * 1.2  - fixed bug in out_file not closing input VMS file, limited
+ *        maximum number of files archived to FILLM quota
+ *      - added mapping to underscores of some more characters found
+ *        in Un*x file names illegal in VMS file names
+ * 1.1  - reworked handling of current VMS default
+ *      - will now create *relative* tarfiles (i.e. files known
+ *        as "./..." in tar archive directory) except when
+ *        device name is specified or wilcard search gives filenames
+ *        located above current default (tar cvf foo.tar [-...]*.* will
+ *        lead to this kind of situation)
+ *      - attempt to handle more than 8 levels of directories upon
+ *        extract : .../d7/d8/d9 will be mapped to [...D7.D8$D9]
+ *      - greatly simplified make_new() because mkdir() creates
+ *        intermediate levels of directories if missing
+ * 1.0	Original version from Sid Penstone's code
+ *	- merged VMS2TAR & TAR2VMS into a single source file
+ *	- code reworked, messages cleaned up
+ *	- added support for 'f tarfile' option, changed default to $TAPE
+ *	- added support for VMS style wildcard file names on extract
+ *	- added support for 'b' (binary file extract) option
+ *	- suppressed usage of intermediate scratch file for create operation
+ *	- file list on create should now be space separated (removed difficult
+ *	  support of comma-separated list with context "a la BACKUP")
+ *	- global code simplification attempt, may have broken some
+ *	  odd case handling
+ *	- added some error handling in tarfile write operations
+ *	- probably millions of bugs introduced... sorry.

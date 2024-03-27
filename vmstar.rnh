@@ -1,0 +1,421 @@
+.set paragraph 0
+.autoparagraph
+.nonumber
+.left margin 0
+1 VMSTAR
+.left margin 2
+VMSTAR is a TAR reader/writer for VMS.  It can read archives ("tarfiles")
+created by the Un*x command "tar" (VMSTAR has a similar syntax) and also create
+such archives so that they can be read later by a Un*x system.  Tarfiles can be
+located in VMS disk files or directly on tape.
+ VMSTAR supports both VMS- and UNIX-style command lines.  To use the UNIX-style
+command line, simply do not use any VMS-style qualifiers.  There are a few
+caveats with this, however.  If you encounter problems, simply precede the UNIX
+option with a hyphen ("-").
+ When using the UNIX-style command line, the default tarfile is whatever the
+logical name "$TAPE" points to (either a device or a file specification) unless
+specified by the "f" modifier.
+ Tapes read and written by VMSTAR must be mounted using the MOUNT qualifiers
+/FOREIGN/RECORD=512/BLOCK=10240.
+ Format:
+.left margin 6
+ (VMS):##$ VMSTAR [/qualifiers] tarfile [filespec[,...]]
+.break
+(UNIX):#$ VMSTAR [-][options] [tarfile] [filespec...]
+.left margin 0
+2 Defining__VMSTAR
+.left margin 2
+To define VMSTAR, enter the following command:
+.left margin 6
+.!
+.! Tailor the following to your site
+.!
+ $ vmstar == "$somedisk:[somedir]vmstar"
+.left margin 2
+ where "somedisk:[somedir]" above is the directory path where the VMSTAR image
+resides.  You can also place the above command in your login command procedure.
+.left margin 0
+2 Qualifiers
+.left margin 0
+/AUTOMATIC
+.left margin 2
+ Valid only when specified with /EXTRACT.
+ Causes VMSTAR to attempt to automatically determine if the file present in the
+tar archive is text or binary and extract it accordingly (see /BINARY).  The
+choice is based on very simple rules such as the proportion of characters in
+the range 0-31 except CR, LF, FF, and TAB, and the proportion of the characters
+above 127 in the first block of the file.
+.blank 1
+.left margin 0
+/BINARY
+.left margin 2
+ Valid only when specified with /EXTRACT.
+ Causes VMSTAR to create VMS files in fixed format, record size=512 bytes, and
+no record attributes.  Use /BINARY when you extract compressed files, tar
+archives, executable VMS images, or any kind of files other than ASCII files
+with line-feed-terminated lines.
+ When this qualifier is *NOT* present, VMS files are created as stream-LF files
+with implied (CR) record attributes.
+.blank 1
+.left margin 0
+/CONFIRM
+.left margin 2
+ Causes VMSTAR to prompt the user for confirmation before storing or extracting
+each file.
+ The following responses are valid:
+.left margin 6
+.literal
+
+Y   -  Yes
+N   -  No
+Q   -  Quit
+A   -  All (stop prompting)
+.end literal
+.blank 1
+.left margin 0
+/CREATE
+.left margin 2
+ Creates a new tar archive.
+.blank 1
+.left margin 0
+/DATE__POLICY[=([option[,...]])]
+.left margin 2
+ Decides which daytime entries in the extracted files header will be set
+to the daytime present in the tar archive:
+.left margin 6
+.literal
+
+[NO]CREATION       - set the creation time.
+[NO]MODIFICATION   - set the modification time.
+[NO]ALL            - set both creation and modification time.
+NONE               - set none of them.
+.end literal
+.blank 1
+.left margin 2
+ Those fields that are not set according to the daytime in the tar archive
+are set to the current daytime instead.  Default is
+/DATE__POLICY=ALL.
+ NOTE: there is no Unix option corresponding to this one.
+.left margin 0
+/DOTS
+.left margin 2
+ Valid with /CREATE and /EXTRACT.
+ When specified with /CREATE, VMSTAR will keep the trailing dot (.) in
+filenames that don't have extensions.
+ When specified with /EXTRACT, VMSTAR will preserve the use of dots in directory
+names.  By default, VMSTAR will convert dots in the Un*x directory
+specifications to underscores.  For example:
+.left margin 6
+ emacs-19.22/src/buffer.c -> [EMACS-19__22.SRC]BUFFER.C
+.left margin 2
+ Specifying /DOTS prevents the conversion, and you get this result instead:
+.left margin 6
+ emacs-19.22/src/buffer.c -> [EMACS-19.22.SRC]BUFFER.C
+.blank 1
+.left margin 0
+/EXTRACT
+.left margin 2
+ This option instructs VMSTAR that files are to be extracted from the tar
+archive and created as VMS files.  One or more Un*x-like file specifications
+including VMS wildcard characters may be present on the command line.  Only
+files matching one of the patterns will be extracted.  If no files are
+specified, all files in the archive will be extracted.
+ VMSTAR will attempt to re-create the directory hierarchy present in the tar
+archive.  If files are named  "./foo/bar..." in the tar archive (a common
+case), the VMS directory tree will be created relative to the current default. 
+All illegal characters in file names will be replaced by "__" (underscore).
+.blank 1
+.left margin 0
+/HELP
+.left margin 2
+Produces a short description of the VMSTAR command line syntax.
+.blank 1
+.left margin 0
+/LIST
+.left margin 2
+ Produces a listing of the contents of the tar archive, including the Un*x-style
+filename, the size in bytes, and the modification date.
+.blank 1
+.left margin 0
+/VERBOSE
+.left margin 2
+ Causes VMSTAR to display filenames and sizes when archiving VMS files and VMS
+file specifications when extracting.
+.left margin 0
+2 UNIX-Style__Options
+.left margin 2
+Options are single letters grouped together with no intervening spaces. There
+must be at least one of "x" (extract), "t" (type) or "c" (create) to indicate
+what kind of action VMSTAR should take.  Other single letters modify these
+basic options.  The group of options may optionally include a leading "-"
+(hyphen) and in some cases may require it.
+.left margin 0
+.right margin -2
+3 c (create)
+.left margin 2
+This option directs VMSTAR to create a tar archive and to copy VMS files as
+directed by file specification(s) into this archive in such a way that they can
+be extracted on a Un*x machine.  File specifications (space separated, no
+commas) can include standard VMS wildcards in file and directory name.
+ If a relative specification is given (no directory or is specified or the
+directory begins with "[." and no device name is included), the file name given
+in the tar archive will be relative, too (not beginning with "/")
+.left margin 0
+3 t (type)
+.left margin 2
+This option produces a listing of the contents of the tar archive, including
+file name (Un*x style), size (in bytes), and modification date.
+.left margin 0
+3 x (extract)
+.left margin 2
+This option instructs VMSTAR that files are to be extracted from the tar
+archive and copied as VMS files.  One or more Un*x-like file specifications
+including VMS wildcard characters may be present on the command line.  Only
+files matching one of the patterns will be actually extracted.  Default is to
+extract all files.
+ VMSTAR will attempt to re-create the directory hierarchy present in the tar
+archive.  If files are named "./foo/bar..." in the tar archive (a common case),
+the VMS directory tree will be created relative to the current default.  All
+illegal characters in file names will be replaced by "__" (underscore).
+.left margin 0
+3 b (binary)
+.left margin 2
+This modifier is meaningful only when VMSTAR extracts files from a tar archive. 
+If it is specified, VMSTAR will create VMS files in fixed format, record
+size=512 bytes, and no record attributes.  Use the "b" modifier when you extract
+compressed files, tar archives, executable VMS images or any kind of files
+other than ASCII files with line-feed-terminated lines.
+ When this modifier is *NOT* present, VMS files are created as stream-LF files
+with implied (CR) record attributes.
+.left margin 0
+3 d (dots)
+.left margin 2
+This modifier is only meaningful for the "c" (create) option.  When it is
+specified, VMSTAR will keep the trailing dot in file names without extension in
+the archive.
+.left margin 0
+3 f tarfile
+.left margin 2
+This modifier allows the specification of the tarfile (either VMS file name or
+VMS device name) to be read or written by VMSTAR.  The default is the value of
+the logical name $TAPE.
+.left margin 0
+3 h (help)
+.left margin 2
+This option produces a short desription of the VMSTAR command line.
+.left margin 0
+3 v (verbose)
+.left margin 2
+Adding this modifier to the "x" or "c" option will cause VMSTAR to display file
+names and sizes stored when archiving VMS files and VMS directory and file
+names created when extracting from an archive.
+.left margin 0
+3 w (wait)
+.left margin 2
+VMSTAR asks for a confirmation before each file is archived or extracted when
+this modifier is specified.
+.left margin 0
+3 z (automatic mode)
+.left margin 2
+When this modifier is present in an extract operation (it's not meaningful for
+any other operation), VMSTAR will attempt to automatically determine if the
+file present in the tar archive is text or binary and extract it accordingly
+(see the 'b' option).  The choice is based on very simple rules such as the
+proportion of characters in the range 0-31 except CR, LF, FF, and TAB, and the
+proportion of the characters above 127 in the first block of the file.
+.right margin -2
+.left margin 0
+2 Filespec
+.left margin 2
+One or more file specifications may be present on the command line as last
+arguments.  They must be separated by commas if the VMS-style command interface
+is used.  If the Un*x-style interface is used, the files must be separated by
+spaces, *NOT* commas.  They may include VMS wildcard characters "*" and "%". 
+Case is never significant.
+ Upon creation, the file specifications must be valid VMS file or directory
+names.  If only a directory name is specified, "*.*;" is automatically
+appended.  The resultant specifications are the names of the VMS file names
+that will be archived in the tarfile.  Use of device names and absolute paths
+("[FOO.BAR]") is strongly discouraged unless absolute archives are to be
+created (see /CREATE).
+ Upon extract, the file specifications must be Un*x file names or patterns for
+Un*x file names using VMS wildcard characters.  Files in the tarfile having
+names matching one of the specifications will be extracted.  If no
+specification is given, all files are extracted. Matching is done using pure
+wildcarded string-matching algorithms, i.e. "/" is a normal character.
+.left margin 0
+2 Examples
+.left margin 6
+.literal
+$ MOUNT/FOREIGN/RECORD=512/BLOCK=10240 MUA0:
+$ VMSTAR/LIST/VERBOSE MUA0:
+
+    or
+
+$ VMSTAR -TVF MUA0:
+.end literal
+.left margin 2
+ Will give a full listing of the tar tape loaded in MUA0:
+.left margin 6
+.literal
+
+$ SET DEF [FOO_ROOT]
+$ VMSTAR/EXTRACT/VERBOSE MUA0:
+
+    or
+
+$ VMSTAR -XVF MUA0:
+
+    as well as
+
+$ VMSTAR XVF MUA0:
+.end literal
+.left margin 2
+ Will extract files from the tar tape in [FOO__ROOT...] provided the files in
+the tar archive do not begin with "/".
+.left margin 6
+.literal
+
+$ DEFINE $TAPE MUA0:
+$ VMSTAR -XV *SOURCES/*.C
+.end literal
+.left margin 2
+ Will only extract C source files in the subdirectory "sources" (or "Sources" 
+or "SOURCES"; case is not significant) from the tar tape mounted in MUA0:
+.left margin 6
+.literal
+
+$ VMSTAR/EXTRACT/VERBOSE EMACS.TAR
+
+    or
+
+$ VMSTAR -XVF EMACS.TAR
+.end literal
+.left margin 2
+ Will extract files in tar archive file EMACS.TAR which may has been transmitted
+from a Un*x system by network.
+.left margin 6
+.literal
+
+$ VMSTAR/EXTRACT/VERBOSE/BINARY EMACS.TAR "./EXECUTABLE/EMACS.EXE"
+
+    or
+
+$ VMSTAR -XVBF EMACS.TAR ./EXECUTABLE/EMACS.EXE
+.end literal
+.left margin 2
+ Will only extract the specified file and create it as a VMS fixed format,
+record size = 512 bytes, no record attributes file.  Note that when VMS
+qualifiers are used, you need double quotes around file specification
+that contain slashes, since VMSTAR otherwise will try to parse them as
+qualifiers.
+.left margin 6
+.literal
+
+$ VMSTAR/CREATE/CONFIRM/VERBOSE MUA0: [.GNUCC...]
+
+    or
+
+$ VMSTAR -CWVF MUA0: [.GNUCC...]
+.end literal
+.left margin 2
+ Will archive the contents of the whole "[.GNUCC...]" subtree in a tape tar
+archive on MUA0:.  VMSTAR will prompt the user before archiving each file.
+.left margin 6
+.literal
+
+$ VMSTAR/CREATE/VERBOSE TARFILE.TAR *.DOC,[.GNUCC...]
+
+    or
+
+$ DEFINE $TAPE TARFILE.TAR
+$ VMSTAR -CV *.DOC [.GNUCC...]
+.end literal
+.left margin 2
+ Will create a tar archive file TARFILE.TAR and write all files with type ".DOC"
+and all the "[.GNUCC...]" subtree in it.
+.left margin 0
+2 Restrictions
+.left margin 2
+If you want to use the Un*x-style command line and want to specify some
+Un*x-style paths (like ./EXECUTABLE/EMACS.EXE), the options must be preceded by
+a hyphen ("-").
+ Because of differences in the Un*x and VMS filesystems, some files may fail to
+be correctly transferred to/from the tarfile.  This can be caused by:
+.list "-"
+.list element;restrictions in VMS file naming scheme: extra dots in file names
+will be mapped to underscores, dummy directory names will be generated if the
+archive contains more than 8 levels of subdirectories, links are extracted as
+empty files containing only a short message "this file is only a link to...",
+all file names are mapped to uppercase, etc.
+.list element;restrictions of the Un*x filesystem: tar will only get the latest
+version of a VMS file to enter it into the archive.  No trace of the original
+file device name is kept in the archive.
+.list element;VMS strong file typing: VMSTAR can only safely archive or extract
+from an archive VMS "text" files (rfm=vfc or stream__lf with rat=cr) or VMS
+fixed size record, 512 bytes/record, rat=none files (e.g. .EXE image files).
+VMSTAR will skip other file types (this includes .OBJ and library files.  They
+*can't* be archived).
+.end list
+ Other restrictions:
+ RMS file attributes are lost in the archive process.  Text files are archived
+as <record><LF><record><LF>.  Fixed files are archived as is.
+ VMSTAR will always restore files relative to your current RMS default if names
+in the tarfile do not begin with `/'.  If file names in the tarfile begin with
+a `/' (bad practice), an attempt will be made to restore the files to the
+absolute path.  There is currently no way to explicitly specify the target VMS
+directory where files should be extracted.
+ No attempt has been made to handle search lists as RMS defaults (e.g.
+SYS$SYSROOT).  Be very careful about that.
+.left margin 0
+2 Authors
+.left margin 2
+VMSTAR is based on the TAR2VMS and VMS2TAR programs written by:
+.left margin 6
+.literal
+
+Sid Penstone,
+VLSI Group,
+Department of Electrical Engineering,
+Queen's University,
+Kingston, Ontario, Canada, K7L3N6
+.end literal
+.left margin 2
+ The combining was done by:
+.left margin 6
+.literal
+
+Alain Fauconnet
+SIM/INSERM U194             EARN/Bitnet:       FAUCONNE@FRSIM51
+Faculte de Medecine         VMS PSI Mail: PSI%+208075090517::FAUCONNET
+91 Boulevard de l'Hopital   FAX:          (+33) 1-45-86-56-85
+75634 PARIS CEDEX 13 FRANCE PTT net:      (+33) 1-45-85-15-29
+.end literal
+.left margin 2
+ VMSTAR is now enhanced and maintained by:
+.left margin 6
+.literal
+
+Hunter Goatley                          Richard Levitte
+VMS Systems Programmer                  GNU on VMS hacker
+Western Kentucky University             Södra Långgatan 39, II
+1 Big Red Way                           S-171 49  Solna
+Bowling Green, KY 42101                 SWEDEN
+E-mail: goathunter@WKUVX1.WKU.EDU       levitte@e.kth.se
+FAX: +1 502 745 6014                    N/A
+.end literal
+.left margin 2
+ Bugs should be reported either Hunter or Richard.
+.left margin 0
+2 Thanks
+.left margin 2
+to all those who have helped make this package better.  The following persons
+have given us great feedback:
+.list "-"
+.list element;Brian#Tillman _<tillman__brian_@si.com_> has made many
+suggestions and has produced VMSTAR.RNH for us.
+.list element;Tim#Adye _<adye_@v2.rl.ac.uk_> has helped us debug VMSTAR
+on AXP, and suggested the addition of the /DATE__POLICY qualifier.
+.list element;Stellan#Lagerström _<stellanl_@e.kth.se_> for giving me
+(Richard) access to his DAT players.
+.end list
