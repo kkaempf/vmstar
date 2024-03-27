@@ -1,3 +1,20 @@
+Tue Jan 15 2015  Steven Schweda <sms@antinode.info>
+
+        * V4.2.  An absolute path could be archived in some cases when a
+          relative path was specified.  For example, a simple file name,
+          without either an explict device name or directory name was
+          archived with an absolute path.  The no-dev/no-dir case and
+          "[]" are now treated as relative paths.  The documentation now
+          explains in more detail what VMSTAR treats as an absolute
+          path.  Thanks to Corinne Robin for the bug report.
+          (VMS2TAR.C, VMSTAR.RNH)
+
+        * The change made in V3.5-pre10 to extend the /ODS2 ("o") option
+          to archive creation worked only for the UNIX-style "o" option,
+          not for the VMS-style /ODS2 option ("%CLI-W-CONFLICT"). 
+          Thanks (again) to Corinne Robin for the bug report.
+          (VMSTAR_CLD.CLD)
+
 Mon Nov 24 2014  Steven Schweda <sms@antinode.info>
 
         * V4.1.  Revised the builders to enable large-file support by

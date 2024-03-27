@@ -227,7 +227,7 @@ v4_0/aaareadme.txt -> [.v4_0]aaareadme.txt
 .end literal
 .left margin 2
  Absolute paths (those with a leading slash) are extracted into the MFD
-([000000]") of the current default device.  For example:
+("[000000]") of the current default device.  For example:
 .left margin 6
 .literal
 
@@ -571,6 +571,11 @@ $ vmstar -cfv html_abs.tar [html]robots.txt     ! Absolute.
 Nov 19 13:52:11 2001      914 /html/robots.txt
 .end literal
 .left margin 2
+ A directory specification is considered absolute if it includes a
+device specification ("xxx:"), or if the directory part of the
+specification does not begin with "[-", "[.", or "[]".  (So, explicitly
+specifying any device, even "SYS$DISK:", makes any directory spec an
+absolute one.)
  A rooted logical name can be used to get absolute path names into an
 archive without including the whole chain of real directory names (like
 using "chroot" on a UNIX system).  For example:
@@ -590,7 +595,7 @@ absolute path to anywhere other than where that absolute path specifies.
  When extracting files from an archive, VMSTAR will base a relative
 path name (without a leading slash), at the current default device and
 directory.  Absolute paths (those with a leading slash) are extracted
-into the MFD ([000000]") of the current default device.  For example:
+into the MFD ("[000000]") of the current default device.  For example:
 .left margin 6
 .literal
 

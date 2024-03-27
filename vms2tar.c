@@ -1062,6 +1062,7 @@ void vms2tar( int argc, char **argv)
         strncpy( string, argv[ argi], NAMX_MAXRSS);
         string[ NAMX_MAXRSS] = '\0';    /* NUL-terminate, just in case. */
         absolute = 0;
+        dev_len = 0;
 
         /* Look for an explicit device name. */
         cp = NULL;
@@ -1102,6 +1103,9 @@ void vms2tar( int argc, char **argv)
         }
         else
         {
+            /* Remember the existence of an explicit device name. */
+            dev_len = 1;
+
             /* Explicit device name requires ODS2/5 test. */
 
             /* 2007-06-06 SMS.
@@ -1123,16 +1127,18 @@ void vms2tar( int argc, char **argv)
 
         /* Attempt to find a directory spec in the file spec. */
         dir_len = find_dir( cp, &dp);
-
         if (dir_len == 0)
         {
-            /* Device but no directory.  User must want absolute paths. */
-            absolute = 1;
+            if (dev_len != 0)
+            {
+                /* Device but no directory.  User must want absolute paths. */
+                absolute = 1;
+            }
         }
         else
         {
-            /* Found a directory.  Set "absolute" if not "[." or "[-". */
-            if ((*(dp+ 1) != '.') && (*(dp+ 1) != '-'))
+            /* Found a directory.  Absolute, if not "[-", "[.", or "[]". */
+            if ((*(dp+ 1) != '-') && (*(dp+ 1) != '.') && (*(dp+ 1) != ']'))
             {
                 absolute = 1;
             }

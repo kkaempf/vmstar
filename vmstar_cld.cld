@@ -1,5 +1,5 @@
 	Module		VMSTAR_CLITABLES
-	Ident		"01-007"
+	Ident		"01-008"
 !+
 !
 !  VMSTAR_CLITABLES
@@ -9,6 +9,8 @@
 !
 !  Modified by:
 !
+!	01-008		Steven Schweda		15-JAN-2015 14:00
+!		Changed to allow /ODS2 with /CREATE.
 !	01-007		Steven Schweda		13-NOV-2010 11:15
 !		Added /SYMLINKS, /UNDERDOT.
 !		Removed dummy parameter (P3) to avoid CLI code ignoring
@@ -65,14 +67,14 @@ Define	Verb		VMSTAR
 	Qualifier	VERBOSE, Value(Type=$NUMBER), NonNegatable
 	Qualifier	YYZ, NonNegatable, Default
 
-	Disallow	CREATE and (EXTRACT or LIST or AUTOMATIC or BINARY
-						or ODS2 or SYMLINKS)
+	Disallow	CREATE and
+			 (EXTRACT or LIST or AUTOMATIC or BINARY or SYMLINKS)
 	Disallow	BLOCK_FACTOR and LIST
 	Disallow	AUTOMATIC and BINARY
 	Disallow	LIST and (CREATE or EXTRACT or BINARY or AUTOMATIC
 			or DOTS or CONFIRM or FORCE or PADDING or ODS2)
-	Disallow	DATE_POLICY.ALL and (DATE_POLICY.NONE
-						or DATE_POLICY.CREATION
-						or DATE_POLICY.MODIFICATION) or
-			DATE_POLICY.NONE and (DATE_POLICY.CREATION
-						or DATE_POLICY.MODIFICATION)
+	Disallow	DATE_POLICY.ALL and
+			 (DATE_POLICY.NONE or DATE_POLICY.CREATION or
+			 DATE_POLICY.MODIFICATION) or
+			 DATE_POLICY.NONE and
+			 (DATE_POLICY.CREATION or DATE_POLICY.MODIFICATION)

@@ -1,4 +1,4 @@
-            VMSTAR V4.1, 2014-11-17
+            VMSTAR V4.2, 2015-01-15
             =======================
 
 ------------------------------------------------------------------------
@@ -50,7 +50,7 @@ helpful, and are appreciated.
 Running VMSTAR with no options or arguments provides brief "Usage"
 notes:
 
-VMSTAR V4.1 (Nov 17 2014)
+VMSTAR V4.2 (Jan 13 2015)
 Usage (UNIX-style): vmstar -[h|c|t|x][BbDdFfopsvwz] [params ...] [file [...]]
 Usage (VMS-style):  VMSTAR [options] tarfile [file [, file [...]]]
  Options (UNIX-style, VMS-style):
@@ -123,15 +123,29 @@ Use:
 (When creating an archive, VMSTAR uses a default file specification of
 "*.*;" for input files, so "[...]" here is equivalent to "[...]*.*;".)
 
-   VMSTAR will create an archive using relative path names (without a
-leading slash), or absolute path names (with a leading slash), depending
-on the form of the input file specifications.  Using a relative VMS
-directory specification will result in relative paths in the archive.
-Using an absolute VMS directory specification in the file specification
-will result in absolute paths in the archive.  For example:
+   When creating an archive, VMSTAR will use relative path names
+(without a leading slash), or absolute path names (with a leading
+slash), depending on the form of the input file specifications.  Using a
+relative VMS directory specification will result in relative paths in
+the archive. Using an absolute VMS directory specification in the file
+specification will result in absolute paths in the archive.  For
+example:
 
       $ vmstx -cfv alphal_rel.tar [.alphal].exe       ! Relative.
       Oct 28 23:04:13 2010    77312 ALPHAL/VMSTAR.EXE
+
+      $ vmstar -cfv html_abs.tar [html]robots.txt     ! Absolute.
+      Nov 19 13:52:11 2001      914 /html/robots.txt
+
+   A directory specification is considered absolute if it includes a
+device specification ("xxx:"), or if the directory part of the
+specification does not begin with "[-", "[.", or "[]".  (So, explicitly
+specifying any device, even "SYS$DISK:", makes any directory spec an
+absolute one.)
+
+   A rooted logical name can be used to get absolute path names into an
+archive without including the whole chain of real directory names (like
+using "chroot" on a UNIX system).  For example:
 
       $ here_root = f$environment( "default") - "]"+ ".]"
       $ define /trans = conc here_root 'here_root'
@@ -139,10 +153,22 @@ will result in absolute paths in the archive.  For example:
       $ vmstx -cfv alphal_abs.tar [alphal].exe        ! Absolute.
       Oct 28 23:04:13 2010    77312 /ALPHAL/VMSTAR.EXE
 
-Using absolute paths in a "tar" archive is generally unwise, because
+   Using absolute paths in a "tar" archive is generally unwise, because
 some "tar" implementations (including VMSTAR) can not easily extract a
 file with an absolute path to anywhere other than where that absolute
 path specifies.
+
+   When extracting files from an archive, VMSTAR will base a relative
+path name (without a leading slash), at the current default device and
+directory.  Absolute paths (those with a leading slash) are extracted
+into the MFD ("[000000]") of the current default device.  For example:
+
+      v4_0/aaareadme.txt  -> [.v4_0]aaareadme.txt
+      /v4_0/aaareadme.txt -> [v4_0]aaareadme.txt
+
+   As when creating an archive, a rooted logical name can be used to
+deceive VMSTAR into extracting into some other directory when it thinks
+that it's extracting into the MFD ("[000000]").
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
