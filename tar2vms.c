@@ -20,8 +20,10 @@
 #include <unixlib.h>
 
 #include <fab.h>
-#include <rab.h>
+#include <libdef.h>
+#include <lib$routines.h>
 #include <math.h>
+#include <rab.h>
 #include <rmsdef.h>
 #include <ssdef.h>
 #include <starlet.h>
@@ -39,18 +41,18 @@
 # include <unistd.h>
 #endif /* def SYMLINKS */
 
-#ifndef __MODE_T                      /* VAX C. */
+#ifndef __MODE_T                        /* VAX C. */
 # define mode_t unsigned short
 #endif /* ndef __MODE_T */
 
-#ifndef S_IRUSR  /* VAX C doesn't have these */
 /*
-**  ISO POSIX-1 definitions
-*/
-#define S_IRUSR  0000400    /* read permission: owner */
-#define S_IWUSR  0000200    /* write permission: owner */
-#define S_IXUSR  0000100    /* execute/search permission: owner */
-#endif /* S_IRUSR */
+ *  ISO POSIX-1 definitions.  (VAX C lacks these.)
+ */
+#ifndef S_IRUSR
+# define S_IRUSR 0000400        /* read permission: owner */
+# define S_IWUSR 0000200        /* write permission: owner */
+# define S_IXUSR 0000100        /* execute/search permission: owner */
+#endif /* ndef S_IRUSR */
 
 
 /* Globals in this module */
@@ -215,23 +217,29 @@ compute_modestring (mode_t mode, char *str)
 
 int data_read( char *buffer, vt_size_t bytes_to_read)
 {
-double block_count;
-    /* Be sure to not read past the number of bytes remaining to be read
-       and handle the case the number of bytes to read is a RECSIZE multiple */
+    double block_count;
+
+    /* Be sure to not read past the number of bytes remaining to be
+     * read, and handle the case where the number of bytes to read is a
+     * RECSIZE multiple.
+     */
     if (bytes_to_read>=BUFFERSIZE)
         block_count = BUFFERFACTOR;
     else
         if (modf((double)bytes_to_read/RECSIZE, &block_count)) block_count++;
+
     return fread( buffer, 1, (size_t)block_count* RECSIZE, tarfp);
 }
 
 
-/* This is supposed to skip over data to get to the desired position */
-/* Position is the number of bytes to skip. We should never have to use
-* this during data transfers; just during listings. */
+/* Skip over data to get to the desired position.
+ * Commonly used when listing.  Used for unrecognized types during
+ * extraction.
+ */
 int tarskip( vt_size_t bytes)
 {
-size_t i=0;
+    size_t i = 0;
+
     while (bytes > 0)
     {
         if ((i = fread( buffer, 1, RECSIZE, tarfp)) == 0)
@@ -248,7 +256,7 @@ size_t i=0;
 }
 
 
-/* This function simply copies the file to the output, no conversion */
+/* Copy archive data to the output file, no conversion. */
 
 int copyfile( char *outfile, vt_size_t nbytes)
 {
@@ -291,13 +299,14 @@ int copyfile( char *outfile, vt_size_t nbytes)
     fil_rab.rab$l_rbf = buffer;
     fil_rab.rab$l_bkt = 1;
 
-/* Read the first block of the tarred file */
+    /* Read the first block of an archive member. */
 
     s = 0;
     binfile = binmode;
     inbytes = 0;
 
-    if ((linkflag == LF_NORMAL) && bytes != 0) {
+    if ((linkflag == LF_NORMAL) && (bytes != 0))
+    {
         if ((inbytes = data_read( buffer, bytes)) < 0)
         {
             fprintf( stderr, "tar: error reading tar file (1).\n");
@@ -305,16 +314,17 @@ int copyfile( char *outfile, vt_size_t nbytes)
             exit( SS$_DATALOST);
         }
 
-/* If automatic mode is set, then try to figure out what kind of file this
-   is */
-
-        if (automode && inbytes != 0) {
+        /* If automatic mode is set, then try to determine which kind of
+         * file this is.
+         */
+        if (automode && inbytes != 0)
+        {
             ctlchars = 0;
             eightbitchars = 0;
 
-/* Scan the buffer, counting chars with msb set and control chars
-   not CR, LF or FF */
-
+            /* Scan the buffer, counting chars with msb set and control
+             * chars other than CR, LF, or FF.
+             */
 	    nchars = bytes < inbytes ? bytes : inbytes;
 	    for (i = 0; i < nchars; ++i) {
 		c = buffer[i];
@@ -326,7 +336,7 @@ int copyfile( char *outfile, vt_size_t nbytes)
 		    eightbitchars++;
 	    }
 
-/* Now apply some heuristics to determine file is text or binary */
+            /* Now apply heuristics to determine if file is text or binary. */
 
 	    ctlchars = ctlchars * 100 / nchars;
 	    eightbitchars = eightbitchars * 100 / nchars;
@@ -336,7 +346,7 @@ int copyfile( char *outfile, vt_size_t nbytes)
         }
     }
 
-/* Open/create the output file/symlink. */
+    /* Open/create the output file/symlink. */
 
 #ifdef SYMLINKS
 
@@ -579,10 +589,8 @@ int copyfile( char *outfile, vt_size_t nbytes)
         if (sts < 0)
         {
             fprintf( stderr,
-             "tar: error setting protection on file %s \n",
+             "tar: error setting protection (chmod) on file %s \n",
              outfile);
-            errno = EVMSERR;
-            vaxc$errno = sts;
             fprintf( stderr, " %s\n", strerror( errno));
         }
     }
@@ -596,6 +604,54 @@ int copyfile( char *outfile, vt_size_t nbytes)
     VMSmunch(outfile, SET_TIMES, &vtb);
     VMSmunch(outfile, SET_EXACT_SIZE, &nbytes);
     return 0;
+}
+
+
+/* Extract pathname (with USTAR prefix, if present) from the header. */
+
+void store_pathname()
+{
+    char *cp = pathname;
+    int ustar = 0;
+    size_t len;
+
+    /* 2014-11-11 SMS.
+     * The "ustar" magic value differs among implementations.  POSIX
+     * says "ustar"+ '\0', but "ustar"+ ' '+ '\0' (and others?) may be
+     * encountered.  We'll be satisfied by "ustar" alone.
+     */
+    if (memcmp( header.magic, "ustar", 5) == 0)
+    {
+        ustar = 1;
+        if (*header.prefix != '\0')             /* If the prefix exists... */
+        {
+	    strcpy( cp, header.prefix);         /* Copy the prefix. */
+            cp += strlen( header.prefix);       /* Advance the pointer. */
+            *(cp++) = '/';                      /* Append a slash. */
+        }
+    }
+    strncpy( cp, header.title, NAMSIZE);        /* Copy the title. */
+    cp[ NAMSIZE] = '\0';                        /* title may lack term. */
+
+    /* A USTAR directory prefix and/or name/title may lack a trailing
+     * slash, if the typeflag/linkflag field says that it's a directory.
+     * We add the slash in that case to accommodate code elsewhere which
+     * identifies a directory by that slash.  Note that the resulting
+     * displayed name may be a lie, because we may append a slash to a
+     * directory name when there was none in the archive.
+     */
+    if (ustar != 0)
+    {
+        if (header.linkflag == DIRTYPE)
+        {
+            len = strlen( cp);
+            if (*(cp+ len- 1) != '/')           /* If last chr not slash ... */
+            {
+               *(cp+ len) = '/';                /* Append a slash. */
+               *(cp+ len+ 1) = '\0';            /* NUL-terminate. */
+            }
+        }
+    }    
 }
 
 
@@ -638,7 +694,7 @@ int decode_header( int have_bytecount, int have_mtime)
     }
 
     /* Add in the post-checksum data. */
-    for (ptr = &header.linkflag; ptr < &header.dummy[ 255]; ptr++)
+    for (ptr = &header.linkflag; ptr < &header.dummy[ 12]; ptr++)
     {
         chksum_calc_sn += *ptr;                 /* Add signed byte. */
         chksum_calc_us += (unsigned char) *ptr; /* Add unsigned byte. */
@@ -648,8 +704,7 @@ int decode_header( int have_bytecount, int have_mtime)
     if ((chksum != chksum_calc_sn) && (chksum != chksum_calc_us))
     {
         /* Use the local pathname for the fatal message. */
-        strncpy( pathname, header.title, NAMSIZE);
-        pathname[ NAMSIZE] = '\0';      /* NUL-terminate, just in case. */
+        store_pathname();
         fprintf( stderr, "tar: directory checksum error for %s\n", pathname);
         exit( SS$_DATALOST);
     }
@@ -681,8 +736,7 @@ int decode_header( int have_bytecount, int have_mtime)
 
 #else /* def _LARGEFILE */
             /* Use the local pathname for the fatal message. */
-            strncpy( pathname, header.title, NAMSIZE);
-            pathname[ NAMSIZE] = '\0';      /* NUL-terminate, just in case. */
+            store_pathname();
             fprintf( stderr, "tar: file size overflow (b) for %s\n", pathname);
             exit( SS$_DATALOST);
 #endif /* def _LARGEFILE [else] */
@@ -703,8 +757,7 @@ int decode_header( int have_bytecount, int have_mtime)
             if (bc != bytecount)
             {
                 /* Use the local pathname for the fatal message. */
-                strncpy( pathname, header.title, NAMSIZE);
-                pathname[ NAMSIZE] = '\0';  /* NUL-terminate, just in case. */
+                store_pathname();
                 fprintf( stderr, "tar: file size overflow (o) for %s\n",
                  pathname);
                 exit( SS$_DATALOST);
@@ -714,10 +767,17 @@ int decode_header( int have_bytecount, int have_mtime)
 
     }
 
+    /* Skip some archive member types. */
     if (linkflag == LF_LONGLINK)
         return -1;
 
     if (linkflag == LF_LONGNAME)
+        return -1;
+
+    if (linkflag == LF_XHD)
+        return -1;
+
+    if (linkflag == LF_XGL)
         return -1;
 
     /* If a link, and if there is no long link name, then use the short
@@ -734,8 +794,7 @@ int decode_header( int have_bytecount, int have_mtime)
     /* If there is no long path name, use the short path name. */
     if (*pathname == '\0')
     {
-        strncpy( pathname, header.title, NAMSIZE);
-        pathname[ NAMSIZE] = '\0';      /* NUL-terminate, just in case. */
+        store_pathname();
         pathname_len = strlen( pathname);
     }
 
@@ -761,9 +820,9 @@ int decode_header( int have_bytecount, int have_mtime)
 }
 
 
-/* Get the next file header from the input file buffer. We will always
-* move to the next 512 byte boundary.
-*/
+/* Get the next file header from the input file buffer.  We will always
+ * move to the next 512 byte boundary.
+ */
 int hdr_read( void *buffer)
 {
     int stat;
@@ -774,19 +833,17 @@ int hdr_read( void *buffer)
 
 
 /* Let's try to do our own, non-buggy mkdir ().  At least, it returns
-   better error codes, especially for non-unix statuses.  For ODS5 volumes
-   we need to do it ourselves anyway as DEC C mkdir will not preserve case
-   properly on directory specifications that are all lower case - get
-   converted to upper case unless DECC$EFS_CASE_PRESERVE is defined. It
-   could be considered rude to have to define it just for vmstar */
+ * better error codes, especially for non-unix statuses.  For ODS5 volumes
+ * we need to do it ourselves anyway as DEC C mkdir will not preserve case
+ * properly on directory specifications that are all lower case - get
+ * converted to upper case unless DECC$EFS_CASE_PRESERVE is defined. It
+ * could be considered rude to have to define it just for vmstar
+ */
 
 /* 2010-10-26 SMS.
  * Added RMS$_DIR to the list of correctable error codes.  Observed on
  * VMS VAX V5.5-2, DEC C V4.0-000.
  */
-
-#include <libdef.h>
-#include <lib$routines.h>
 
 int mkdir_vmstar( char *dir, mode_t mode)
 {
@@ -815,7 +872,7 @@ int mkdir_vmstar( char *dir, mode_t mode)
 }
 
 
-/* make_new -- create a new directory */
+/* make_new -- Create a new directory. */
 
 int make_new( char *want)
 {
@@ -875,9 +932,9 @@ char *dotp;
 }
 
 
-/* vms_cleanup -- removes illegal characters from directory and file names
- * Replaces hyphens and commas with underscores. Returns number of translations
- * that were made.
+/* vms_cleanup -- Remove illegal characters from directory and file
+ * names.  Replace hyphens and commas with underscores.  Return the
+ * number of translations that were made.
  */
 
 vms_cleanup( char *string)
@@ -886,19 +943,16 @@ vms_cleanup( char *string)
     char c, *p;
     static char *badchars, *translate;
 
-    if (acp_type == DVI$C_ACP_F11V5) {
-
+    if (acp_type == DVI$C_ACP_F11V5)
+    {
         badchars = BADCHARS_ODS5;
         translate = TRANSLATE_ODS5;
-
-        }
-
-    else {
-
+    }
+    else
+    {
         badchars = BADCHARS_ODS2;
         translate = TRANSLATE_ODS2;
-
-        }
+    }
 
     for(i=0; c=string[i]; ++i)
     {
@@ -907,7 +961,8 @@ vms_cleanup( char *string)
             string[i] = translate[p-badchars];
             flag++;          /* Record if any changes were made */
         }
-        else {
+        else
+        {
             /* Escape remaining illegal ODS2 characters for ODS5.
              * Dots must be escaped only if they are in a directory
              * portion of the path, and only if they won't be converted
@@ -915,11 +970,12 @@ vms_cleanup( char *string)
              */
             if (acp_type == DVI$C_ACP_F11V5 &&
              ((p = strchr(BADCHARS_ODS2, c)) != NULL ||
-             ((c == '.') && (dot) && strchr(string + i, '/') != NULL))) {
+             ((c == '.') && (dot) && strchr(string + i, '/') != NULL)))
+            {
                 strcpy(string + i + 1, string + i);
                 string[i++] = '^';
-                }
             }
+        }
         if (ods2) string[i] = toupper(string[i]);  /* Map to uppercase */
     }
 
@@ -943,7 +999,7 @@ vms_cleanup( char *string)
 }
 
 
-/* scan_title -- decode a Un*x file name into the directory and name */
+/* scan_path -- decode a Un*x file name into the directory and name */
 
 /* Return a value to indicate if this is a directory name, or another file
 * We return the extracted directory string in "dire", and the
@@ -951,22 +1007,24 @@ vms_cleanup( char *string)
 * at input.
 */
 
-int scan_title( char *line, char *dire, char *fname)
+int scan_path( char *line, char *dire, char *fname)
 {
-char *end1;
-int len,len2,i,ind;
+    char *end1;
+    int len,len2,i,ind;
+
 /* The format will be UNIX at input, so we have to scan for the
-* UNIX directory separator '/'
-* If the name ends with '/' then it is actually a directory name.
-* If the directory consists only of '.', then don't add a subdirectory
-* The output directory will be a complete file spec, based on the default
-* directory.
-*/
+ * UNIX directory separator '/'.
+ * If the name ends with '/' then it is actually a directory name.
+ * If the directory consists only of '.', then don't add a subdirectory
+ * The output directory will be a complete file spec, based on the
+ * default directory.
+ */
 
     strcpy(dire,curdir);                /* Start with the current dir */
 
     /* We need to make sure the directory delimiters are square brackets,
-       otherwise we'll get some problems... -- Richard Levitte */
+     * otherwise we'll get some problems... -- Richard Levitte
+     */
     while ((end1 = strchr(dire,'<')) != 0)
         *end1 = '[';
     while ((end1 = strchr(dire,'>')) != 0)
@@ -1182,8 +1240,10 @@ void tar2vms( int argc, char **argv)
             have_bytecount = 0;
 
 #ifdef DEBUG
-            fprintf( stderr, "Header linkflag = %d.\n", linkflag);
+            fprintf( stderr, "Process = %d.  Header linkflag = %d (%c).\n",
+             process, linkflag, linkflag);
 #endif
+
             if (linkflag == LF_LONGLINK)
             {
                 /* Read long link name ('K'). */
@@ -1312,12 +1372,19 @@ void tar2vms( int argc, char **argv)
                 }
                 continue;
             }
+            else if (process < 0)
+            {
+                /* Unrecognized typeflag/linkflag (including LF_XHG or
+                 * LF_XGL).  Currently, do nothing.  Skip data.
+                 */
+                tarskip( bytecount);
+            }
 
             if (process >= 0)
             {
-            /* If file names were specified on the command line, then
-             * check if any one matches the current archive member.
-             */
+                /* If file names were specified on the command line,
+                 * then check if any match the current archive member.
+                 */
                 if (argc > 0)
                 {
                     process = 0;
@@ -1395,7 +1462,7 @@ void tar2vms( int argc, char **argv)
 
         if ((process > 0) && extract)
         {
-            file_type = scan_title( pathname, new_dir, newfile);
+            file_type = scan_path( pathname, new_dir, newfile);
             cleanup_dire( new_dir);
             if (make_new( new_dir) != 0)
                 fprintf( stderr, "tar: error creating %s\n", new_dir);
@@ -1449,13 +1516,13 @@ void tar2vms( int argc, char **argv)
             if ((process > 0) && list)               /* listing only */
             {
                 /* Some tar programs set the 'linkflag' to LF_DIR ('5')
-                   and don't append a '/' at the end for directory files.
-                   However, it appears that some tar programs do (POSIX
-                   tar, for instance).  So if the file is a "regular
-                   file" (LF_NORMAL, '0') and the pathname has a
-                   trailing slash, change the 'linkflag' to LF_DIR and
-                   remove the slash.
-                */
+                 * and don't append a '/' at the end for directory files.
+                 * However, it appears that some tar programs do (POSIX
+                 * tar, for instance).  So if the file is a "regular
+                 * file" (LF_NORMAL, '0') and the pathname has a
+                 * trailing slash, change the 'linkflag' to LF_DIR and
+                 * remove the slash.
+                 */
                 if ((pathname[ pathname_len- 1] == '/') &&
                  (linkflag == LF_NORMAL))
                 {
@@ -1536,7 +1603,7 @@ void tar2vms( int argc, char **argv)
         if ((sts& STS$M_SUCCESS) != STS$K_SUCCESS)
         {
             fprintf( stderr,
-             "tar: error setting protection on file %s \n",
+             "tar: error setting protection (VMSmunch) on file %s \n",
              outfile);
             errno = EVMSERR;
             vaxc$errno = sts;
@@ -1547,16 +1614,17 @@ void tar2vms( int argc, char **argv)
 
     if (status == 1)                    /* Empty header */
     {
+#if 0
+        fprintf( stderr, "Do you wish to move past the EOF mark (y/n) ? ");
+        fflush(stdout);
+        gets(temp);
+        if (tolower(*temp) == 'y')
+            while ((status=hdr_read(&header)) > 0);
+        else
+#endif /* 0 */
 
-/*        fprintf( stderr, "Do you wish to move past the EOF mark (y/n) ? ");
-**        fflush(stdout);
-**        gets(temp);
-**        if (tolower(*temp) == 'y')
-**            while ((status=hdr_read(&header)) > 0);
-**        else
-*/
-            fclose(tarfp);
-            exit( SS$_NORMAL);
+        fclose(tarfp);
+        exit( SS$_NORMAL);
     }
     if (status == 0)                    /* End of tar file  */
     {

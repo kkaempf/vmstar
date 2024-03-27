@@ -1,4 +1,4 @@
-            VMSTAR V4.0, 2010-11-23
+            VMSTAR V4.1, 2014-11-17
             =======================
 
 ------------------------------------------------------------------------
@@ -14,13 +14,13 @@ do not have UNIX-like record formats (Stream_LF, fixed-512), so it's not
 a good replacement for more RMS-aware programs like BACKUP or Info-ZIP
 Zip and UnZip.
 
-   When built with large-file support enabled (on reasonably modern,
-non-VAX systems), VMSTAR should be able to extract large files (>2GB
-or >8GB) from archives which were created using Solaris "tar -E" or GNU
-"tar".  Similarly, long archive path names (>100 characters) should be
-handled properly if the VMS file system can deal with them.  VMSTAR uses
-GNU-"tar"-style archive format extensions when it creates an archive
-containing large files or long names.
+   When built with large-file support enabled (the default on reasonably
+modern, non-VAX systems), VMSTAR should be able to extract large files
+(>2GB or >8GB) from archives which were created using Solaris "tar -E"
+or GNU "tar".  Similarly, long archive path names (>100 characters)
+should be handled properly if the VMS file system can deal with them.
+VMSTAR uses GNU-"tar"-style archive format extensions when it creates an
+archive containing large files or long names.
 
 ------------------------------------------------------------------------
 
@@ -38,6 +38,9 @@ changes to the product in the many years since:
       Hunter Goatley <goathunter@WKUVX1.WKU.EDU>
       Steven Schweda <sms@antinode.info>
 
+   For details, see CHANGELOG.TXT.  Problem reports from users have been
+helpful, and are appreciated.
+
 ------------------------------------------------------------------------
 
       Usage Basics
@@ -47,7 +50,7 @@ changes to the product in the many years since:
 Running VMSTAR with no options or arguments provides brief "Usage"
 notes:
 
-VMSTAR V4.0 (Oct 28 2010)
+VMSTAR V4.1 (Nov 17 2014)
 Usage (UNIX-style): vmstar -[h|c|t|x][BbDdFfopsvwz] [params ...] [file [...]]
 Usage (VMS-style):  VMSTAR [options] tarfile [file [, file [...]]]
  Options (UNIX-style, VMS-style):
@@ -63,7 +66,7 @@ Usage (VMS-style):  VMSTAR [options] tarfile [file [, file [...]]]
   A|n      ALL, NONE      ALL: (CREAT, MODIF), NONE: (NOCREAT, NOMODIF).
   (UNIX-style: "c" = NOCREAT, "C" = CREAT, "m" = NOMODIF, "M" = MODIF,
                "A" = ALL, "n" = NONE.)
- d        /DOTS           Archive names retain a trailing dot.
+ d        /DOTS           Archived names retain a trailing dot.
                           (Default: Trim trailing dots: "fred." -> "fred".)
                           Extract literal dots ("^.") in directory name (ODS5).
                           (Default: Convert dots in directory name to "_".)
@@ -127,7 +130,7 @@ directory specification will result in relative paths in the archive.
 Using an absolute VMS directory specification in the file specification
 will result in absolute paths in the archive.  For example:
 
-      $ vmstx =cfv alphal_rel.tar [.alphal].exe       ! Relative.
+      $ vmstx -cfv alphal_rel.tar [.alphal].exe       ! Relative.
       Oct 28 23:04:13 2010    77312 ALPHAL/VMSTAR.EXE
 
       $ here_root = f$environment( "default") - "]"+ ".]"
@@ -237,15 +240,15 @@ convenient, especially when using the UNIX-style command line of VMSTAR
       Building VMSTAR
       ---------------
 
-   The kit includes MMS/MMK builders and a DCL command procedure.
-Comments in the main builder files (BUILD_VMSTAR.COM, DESCRIP.MMS)
-explain usage details.  Typical build commands are shown below.
+   The kit includes MMS/MMK builders and a DCL script.  Comments in the
+main builder files (BUILD_VMSTAR.COM, DESCRIP.MMS) explain usage
+details.  Typical build commands are shown below.
 
-      @ BUILD_VMSTAR.COM         ! No large-file support (VAX).
-      @ BUILD_VMSTAR.COM LARGE   ! Non-VAX, with large-file support.
+      @ BUILD_VMSTAR.COM
+      @ BUILD_VMSTAR.COM NOLARGE ! Non-VAX, without large-file support.
 
-      MMS                        ! No large-file support (VAX).
-      MMS /MACRO = LARGE=1       ! Non-VAX, with large-file support.
+      MMS                        ! Or MMK.
+      MMS /MACRO = NOLARGE=1     ! Non-VAX, without large-file support.
 
    Product (object, link option, and executable) files should be created
 in an architecture-specific subdirectory:

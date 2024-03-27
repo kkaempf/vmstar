@@ -2,28 +2,35 @@ $! BUILD_VMSTAR.COM
 $!
 $!     Build procedure for VMSTAR.
 $!
-$!     last revised:  2008-01-05  SMS.
+$!     Last revised:  2014-11-24  SMS.
 $!
 $!     Command arguments:
-$!     - suppress help file processing: "NOHELP"
-$!     - select link-only: "LINK"
-$!     - select compiler environment: "VAXC", "DECC"
-$!     - select large-file support: "LARGE"
-$!     - select compiler listings: "LIST"  Note that the whole argument
+$!     - Suppress C compilation (re-link): "NOCOMPILE"
+$!     - Suppress linking executables: "NOLINK"
+$!     - Suppress help file processing: "NOHELP"
+$!     - Select compiler environment: "VAXC", "DECC"
+$!     - Enable large-file (>2GB) support: "LARGE"
+$!       Disable large-file (>2GB) support: "NOLARGE"
+$!       Large-file support is always disabled on VAX.  It is enabled by
+$!       default on IA64, and on Alpha systems which are modern enough
+$!       to allow it.  Specify NOLARGE=1 explicitly to disable support
+$!       (and to skip the test on Alpha).
+$!     - Select compiler listings: "LIST"  Note that the whole argument
 $!       is added to the compiler command, so more elaborate options
 $!       like "LIST/SHOW=ALL" (quoted or space-free) may be specified.
-$!     - supply additional compiler options: "CCOPTS=xxx"  Allows the
+$!     - Supply additional compiler options: "CCOPTS=xxx"  Allows the
 $!       user to add compiler command options like /ARCHITECTURE or
 $!       /[NO]OPTIMIZE.  For example, CCOPTS=/ARCH=HOST/OPTI=TUNE=HOST
 $!       or CCOPTS=/DEBUG/NOOPTI.  These options must be quoted or
 $!       space-free.
-$!     - supply additional linker options: "LINKOPTS=xxx"  Allows the
+$!     - Supply additional linker options: "LINKOPTS=xxx"  Allows the
 $!       user to add linker command options like /DEBUG or /MAP.  For
 $!       example: LINKOPTS=/DEBUG or LINKOPTS=/MAP/CROSS.  These options
 $!       must be quoted or space-free.  Default is
 $!       LINKOPTS=/NOTRACEBACK, but if the user specifies a LINKOPTS
 $!       string, /NOTRACEBACK will not be included unless specified by
 $!       the user.
+$!     - Show version reports: "DASHV", "SLASHV"
 $!
 $!     To specify additional options, define the global symbol
 $!     LOCAL_VMSTAR as a comma-separated list of the C macros to be
@@ -60,12 +67,15 @@ $!
 $!##################### Customizing section #############################
 $!
 $ CCOPTS = ""
+$ DASHV = 0
 $ LINKOPTS = "/notraceback"
-$ LINK_ONLY = 0
 $ LISTING = " /nolist"
 $ LARGE_FILE = 0
+$ MAKE_EXE = 1
 $ MAKE_HELP = 1
+$ MAKE_OBJ = 1
 $ MAY_USE_DECC = 1
+$ SLASHV = 0
 $!
 $! Process command line parameters requesting optional features.
 $!
@@ -83,6 +93,12 @@ $         CCOPTS = f$extract( (eq+ 1), 1000, opts)
 $         goto argloop_end
 $     endif
 $!
+$     if (f$extract( 0, 5, curr_arg) .eqs. "DASHV")
+$     then
+$         DASHV = 1
+$         goto argloop_end
+$     endif
+$!
 $     if (f$extract( 0, 5, curr_arg) .eqs. "LARGE")
 $     then
 $         LARGE_FILE = 1
@@ -97,23 +113,39 @@ $         LINKOPTS = f$extract( (eq+ 1), 1000, opts)
 $         goto argloop_end
 $     endif
 $!
-$! Note: LINK test must follow LINKOPTS test.
-$!
-$     if (f$extract( 0, 4, curr_arg) .eqs. "LINK")
-$     then
-$         LINK_ONLY = 1
-$         goto argloop_end
-$     endif
-$!
 $     if (f$extract( 0, 4, curr_arg) .eqs. "LIST")
 $     then
 $         LISTING = "/''curr_arg'"      ! But see below for mods.
 $         goto argloop_end
 $     endif
 $!
+$     if (curr_arg .eqs. "NOCOMPILE")
+$     then
+$         MAKE_OBJ = 0
+$         goto argloop_end
+$     endif
+$!
 $     if (curr_arg .eqs. "NOHELP")
 $     then
 $         MAKE_HELP = 0
+$         goto argloop_end
+$     endif
+$!
+$     if (f$extract( 0, 7, curr_arg) .eqs. "NOLARGE")
+$     then
+$         LARGE_FILE = -1
+$         goto argloop_end
+$     endif
+$!
+$     if (curr_arg .eqs. "NOLINK")
+$     then
+$         MAKE_EXE = 0
+$         goto argloop_end
+$     endif
+$!
+$     if (f$extract( 0, 6, curr_arg) .eqs. "SLASHV")
+$     then
+$         SLASHV = 1
 $         goto argloop_end
 $     endif
 $!
@@ -180,16 +212,17 @@ $     endif
 $!
 $     cc = "cc /prefix = all"
 $     defs = "''LOCAL_VMSTAR'"
-$     if (LARGE_FILE .ne. 0)
+$     if (LARGE_FILE .ge. 0)
 $     then
 $         defs = "_LARGEFILE, ''defs'"
 $     endif
 $ else
-$     if (LARGE_FILE .ne. 0)
+$     if (LARGE_FILE .gt. 0)
 $     then
 $        say "Large-file support is not available on VAX."
 $        LARGE_FILE = 0
 $     endif
+$     LARGE_FILE = -1
 $     HAVE_DECC_VAX = (f$search( "SYS$SYSTEM:DECC$COMPILER.EXE") .nes. "")
 $     HAVE_VAXC_VAX = (f$search( "SYS$SYSTEM:VAXC.EXE") .nes. "")
 $     if (HAVE_DECC_VAX .and. MAY_USE_DECC)
@@ -216,36 +249,71 @@ $ endif
 $!
 $! Change the destination directory, according to the large-file option.
 $!
-$ seek_bz = arch
-$ if (LARGE_FILE .ne. 0)
+$ if (LARGE_FILE .ge. 0)
 $ then
 $     dest = dest+ "L"
-$     seek_bz = seek_bz+ "L"
+$ endif
+$!
+$! If DASHV was requested, then run "vmstar -v" (and exit).
+$!
+$ if (dashv)
+$ then
+$     mcr [.'dest']vmstar -v
+$     goto error
+$ endif
+$!
+$! If SLASHV was requested, then run "vmstar /verbose" (and exit).
+$!
+$ if (slashv)
+$ then
+$     mcr [.'dest']vmstar /verbose
+$     goto error
 $ endif
 $!
 $! Reveal the plan.  If compiling, set some compiler options.
 $!
-$ if (LINK_ONLY)
+$ if (MAKE_OBJ)
 $ then
-$     say "Linking on ''arch' for ''cmpl'."
-$ else
 $     say "Compiling on ''arch' using ''cmpl'."
+$ else
+$     if (MAKE_EXE)
+$     then
+$         say "Linking on ''arch' for ''cmpl'."
+$     endif
 $ endif
 $!
 $! If [.'dest'] does not exist, either complain (link-only) or make it.
 $!
 $ if (f$search( "''dest'.DIR;1") .eqs. "")
 $ then
-$     if (LINK_ONLY)
+$     if (MAKE_OBJ)
 $     then
-$         say "Can't find directory ""[.''dest']"".  Can't link."
-$         goto error
-$     else
 $         create /directory [.'dest']
+$     else
+$         if (MAKE_EXE)
+$         then
+$             say ""
+$             say "Can't find directory ""[.''dest']"".  Can't link."
+$             goto error
+$         endif
 $     endif
 $ endif
 $!
-$ if (.not. LINK_ONLY)
+$! Verify (default) large-file support on Alpha.
+$!
+$ if ((arch .eqs. "ALPHA") .and. (LARGE_FILE .eq. 0))
+$ then
+$     @ check_large.com 'dest' large_file_ok
+$     if (f$trnlnm( "large_file_ok") .eqs. "")
+$     then
+$         say ""
+$         say "Large-file support not available (OS/CRTL too old?)."
+$         say "Add ""NOLARGE"" to the command."
+$         goto error
+$     endif
+$ endif
+$!
+$ if (MAKE_OBJ)
 $ then
 $!
 $! Arrange to get arch-specific list file placement, if LISTING, and if
@@ -264,30 +332,40 @@ $     cc = cc+ " "+ LISTING+ CCOPTS
 $!
 $ endif
 $!
+$ if (MAKE_EXE)
+$ then
+$!
 $! Define linker command.
 $!
-$ link = "link ''LINKOPTS'"
+$     link = "link ''LINKOPTS'"
 $!
 $! Make a VAXCRTL options file for VAC C, if needed.
 $!
-$ if ((opts .nes. "") .and. -
-   (f$locate( "VAXCSHR", f$edit( opts, "UPCASE")) .lt. f$length( opts)) .and. -
-   (f$search( "[.''dest']VAXCSHR.OPT") .eqs. ""))
-$ then
-$     create /fdl = STREAM_LF.FDL [.'dest']VAXCSHR.OPT
-$     open /read /write opt_file_ln [.'dest']VAXCSHR.OPT
-$     write opt_file_ln "SYS$SHARE:VAXCRTL.EXE /SHARE"
-$     close opt_file_ln
+$     if ((opts .nes. "") .and. -
+       (f$locate( "VAXCSHR", f$edit( opts, "UPCASE")) .lt. -
+       f$length( opts)) .and. -
+       (f$search( "[.''dest']VAXCSHR.OPT") .eqs. ""))
+$     then
+$         create /fdl = STREAM_LF.FDL [.'dest']VAXCSHR.OPT
+$         open /read /write opt_file_ln [.'dest']VAXCSHR.OPT
+$         write opt_file_ln "SYS$SHARE:VAXCRTL.EXE /SHARE"
+$         close opt_file_ln
+$     endif
 $ endif
 $!
 $! Show interesting facts.
 $!
 $ say "   architecture = ''arch' (destination = [.''dest'])"
-$ if (.not. LINK_ONLY)
+$ if (MAKE_OBJ)
 $ then
 $     say "   cc = ''cc'"
 $ endif
-$ say "   link = ''link'"
+$!
+$ if (MAKE_EXE)
+$ then
+$     say "   link = ''link'"
+$ endif
+$!
 $ if (.not. MAKE_HELP)
 $ then
 $     say "   Not making new help files."
@@ -303,22 +381,12 @@ $ MODS_OBJS_VMSTAR = -
  "[.''dest']VMSTAR_CMDLINE.OBJ "+ -
  "[.''dest']VMS_IO.OBJ "
 $!
-$ tmp = f$verify( 1)    ! Turn echo on to see what's happening.
-$!
-$!
-$ if (.not. LINK_ONLY)
+$ if (MAKE_OBJ)
 $ then
-$!
-$! Process the help file, if desired.
-$!
-$     if (MAKE_HELP)
-$     then
-$         runoff /output = VMSTAR.HLP VMSTAR.RNH
-$     endif
-$     tmp = f$verify( 0)    ! Turn echo off.
 $!
 $! Extract the program version from VERSION.OPT (ident="V3.5").
 $!
+$     say "   Extracting program version from version.opt."
 $     ident = ""
 $     open /read /error = no_version vers VERSION.OPT
 $     loopvers:
@@ -337,6 +405,8 @@ $     defs = "''defs' VERSION=""""""''ident'"""""""
 $!
 $! Compile the sources.
 $!
+$     say ""
+$     say "   Compiling sources."
 $     element = 0
 $     objs = f$edit( MODS_OBJS_VMSTAR, "COMPRESS, TRIM")
 $     cmplloop:
@@ -350,27 +420,49 @@ $         element = element+ 1
 $     goto cmplloop
 $     cmplloop_end:
 $!
-$     tmp = f$verify( 1)    ! Turn echo on.
+$     tmp = f$verify( 1)        ! Turn echo on.
 $     set command /object = [.'dest']VMSTAR_CLD.OBJ VMSTAR_CLD.CLD
-$     tmp = f$verify( 0)    ! Turn echo off.
+$     tmp = f$verify( 0)        ! Turn echo off.
 $!
 $ endif
 $!
-$ tmp = f$verify( 0)    ! Turn echo off.
+$ tmp = f$verify( 0)            ! Turn echo off.
+$!
+$ if (MAKE_EXE)
+$ then
 $!
 $! Create the object list options file.
 $!
-$ @ LIST_TO_OPT.COM "VMSTAR" [.'dest']VMSTAR_OBJS.OPT -
-   "''MODS_OBJS_VMSTAR'"
+$     say ""
+$     say "   Creating the link options file (object files)."
+$     @ LIST_TO_OPT.COM "VMSTAR" [.'dest']VMSTAR_OBJS.OPT -
+       "''MODS_OBJS_VMSTAR'"
 $!
 $! Link the executable.
 $!
-$ tmp = f$verify( 1)    ! Turn echo on.
-$ link /executable = [.'dest']VMSTAR.EXE -
-   [.'dest']VMSTAR_OBJS.OPT /options, -
-   [.'dest']VMSTAR_CLD.OBJ -
-   'opts'
-$ tmp = f$verify( 0)    ! Turn echo off.
+$     say ""
+$     say "   Linking the executable."
+$     tmp = f$verify( 1)        ! Turn echo on.
+$     link /executable = [.'dest']VMSTAR.EXE -
+       [.'dest']VMSTAR_OBJS.OPT /options, -
+       [.'dest']VMSTAR_CLD.OBJ -
+       'opts'
+$     tmp = f$verify( 0)        ! Turn echo off.
+$!
+$ endif
+$!
+$! Process the help file, if desired.
+$!
+$ if (MAKE_HELP)
+$ then
+$     say ""
+$     say "   Creating the help source file."
+$     tmp = f$verify( 1)        ! Turn echo on.
+$     runoff /output = VMSTAR.HLP VMSTAR.RNH
+$     tmp = f$verify( 0)        ! Turn echo off.
+$ endif
+$!
+$ tmp = f$verify( 0)            ! Turn echo off.
 $!
 $! Restore the original default directory and DCL verify status.
 $!

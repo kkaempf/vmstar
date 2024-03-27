@@ -1,6 +1,8 @@
-#                                               24 February 2009.  SMS.
+# DESCRIP.MMS
 #
-#    VMSTAR 4.0 for VMS - MMS (or MMK) Description File.
+#    VMSTAR 4.1 - MMS (or MMK) Description File.
+#
+#    Last revised:  2014-11-24
 #
 # Usage:
 #
@@ -15,7 +17,12 @@
 #                   Link with /DEBUG /TRACEBACK.
 #                   (Default is /NOTRACEBACK.)
 #
-#    LARGE=1        Enable large-file (>2GB) support.  Non-VAX only.
+#    LARGE=1        Enable/disable large-file (>2GB) support.  Always
+#    NOLARGE=1      disabled on VAX.  Enabled by default on Alpha and
+#                   IA64.  On Alpha, by default, large-file support is
+#                   tested, and the build will fail if that test fails.
+#                   Specify NOLARGE=1 explicitly to disable support (and
+#                   to skip the test on Alpha).
 #
 #    "LINKOPTS=xxx" Link with LINK options xxx.  For example:
 #                   "LINKOPTS=/NOINFO"
@@ -51,23 +58,26 @@
 #    CLEAN_EXE  deletes only the architecture-specific executables.
 #               Handy if all you wish to do is re-link the executables.
 #
+#    DASHV      generates a "vmstar -v" report.
+#
+#    SLASHV     generates a "vmstar /verbose" report.
+#
 # Example commands:
 #
-# To build the conventional small-file product using the DEC/Compaq/HP C
-# compiler (Note: DESCRIP.MMS is the default description file name.):
+# To build the large-file product (except on VAX) using the
+# DEC/Compaq/HP C compiler (Note: DESCRIP.MMS is the default description
+# file name.):
 #
 #    MMS
 #
-# To get the large-file executables (on a non-VAX system):
+# To get a small-file executable (on a non-VAX system):
 #
-#    MMS /MACRO = (LARGE=1)
+#    MMS /MACRO = (NOLARGE=1)
 #
 # To delete the architecture-specific generated files for this system
 # type:
 #
-#    MMS /MACRO = (LARGE=1) CLEAN               ! Large-file.
-# or
-#    MMS CLEAN                                  ! Small-file.
+#    MMS CLEAN
 #
 # To build a complete small-file product for debug with compiler
 # listings and link maps:
@@ -153,6 +163,16 @@ CLEAN_ALL :
 CLEAN_EXE :
         if (f$search( "[.$(DEST)]*.EXE") .nes. "") then -
          delete [.$(DEST)]*.EXE;*
+
+# DASHV target.  Generate a "zip -v" report.
+
+DASHV :
+        mcr [.$(DEST)]vmstar -v
+
+# SLASHV target.  Generate a "zip_cli /verbose" report.
+
+SLASHV :
+        mcr [.$(DEST)]vmstar /verbose
 
 
 # Default C compile rule.

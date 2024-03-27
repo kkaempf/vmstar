@@ -1,6 +1,8 @@
-#                                               24 November 2010.  SMS.
+# DESCRIP_SRC.MMS
 #
-#    VMSTAR 4.0 for VMS - MMS (or MMK) Source Description File.
+#    VMSTAR 4.1 - MMS (or MMK) Source Description File.
+#
+#    Last revised:  2014-11-24
 #
 
 # This description file is included by other description files.  It is
@@ -47,36 +49,80 @@ VAXC_OR_FORCE_VAXC = 1
 
 .IFDEF __ALPHA__                # __ALPHA__
 DECC = 1
-DESTC = ALPHA
-.IFDEF LARGE                        # LARGE
-DEST = $(DESTC)L
-.ELSE                               # LARGE
-DEST = $(DESTC)
-.ENDIF                              # LARGE
+DESTM = ALPHA
 .ELSE                           # __ALPHA__
 .IFDEF __IA64__                     # __IA64__
 DECC = 1
-DESTC = IA64
-.IFDEF LARGE                            # LARGE
-DEST = $(DESTC)L
-.ELSE                                   # LARGE
-DEST = $(DESTC)
-.ENDIF                                  # LARGE
+DESTM = IA64
 .ELSE                               # __IA64__
 .IFDEF __VAX__                          # __VAX__
 .IFDEF VAXC_OR_FORCE_VAXC                   # VAXC_OR_FORCE_VAXC
-DESTC = VAXV
+DESTM = VAXV
 .ELSE                                       # VAXC_OR_FORCE_VAXC
 DECC = 1
-DESTC = VAX
+DESTM = VAX
 .ENDIF                                      # VAXC_OR_FORCE_VAXC
 .ELSE                                   # __VAX__
-DESTC = UNK
+DESTM = UNK
 UNK_DEST = 1
 .ENDIF                                  # __VAX__
-DEST = $(DESTC)
 .ENDIF                              # __IA64__
 .ENDIF                          # __ALPHA__
+
+# Large-file support.  Always no on VAX.  Assume yes elsewhere.  On
+# Alpha, the .FIRST rule will detect incompatibility (before VMS V7.2).
+
+# Targets which can bypass the AES_WG test and, on Alpha, the (slow)
+# large-file test.
+# (Not "" or ALL.  Could add help- and message-related.)
+
+TRGT_CLEAN = 1
+TRGT_CLEAN_ALL = 1
+TRGT_CLEAN_EXE = 1
+TRGT_DASHV = 1
+TRGT_SLASHV = 1
+
+TRGT = TRGT_$(MMSTARGETS)
+.IFDEF $(TRGT)                  # $(TRGT)
+.IFDEF __ALPHA__                    # __ALPHA__
+.IFDEF NOCHECK_LARGE                    # NOCHECK_LARGE
+.ELSE                                   # NOCHECK_LARGE
+NOCHECK_LARGE = 1
+.ENDIF                                  # NOCHECK_LARGE
+.ENDIF                              # __ALPHA__
+.ENDIF                          # $(TRGT)
+
+.IFDEF __VAX__                  # __VAX__
+.IFDEF NOLARGE                      # NOLARGE
+.ELSE                               # NOLARGE
+NOLARGE = 1
+.ENDIF                              # NOLARGE
+.ENDIF                          # __VAX__
+
+# Translate NO_LARGE to NOLARGE.
+.IFDEF NO_LARGE                 # NO_LARGE
+.IFDEF NOLARGE                      # NOLARGE
+.ELSE                               # NOLARGE
+NOLARGE = 1
+.ENDIF                              # NOLARGE
+.ENDIF                          # NO_LARGE
+
+.IFDEF NOLARGE                  # NOLARGE
+.ELSE                           # NOLARGE
+.IFDEF LARGE                        # LARGE
+.ELSE                               # LARGE
+LARGE = 1
+.IFDEF __ALPHA__                        # __ALPHA__
+.IFDEF NOCHECK_LARGE                        # NOCHECK_LARGE
+.ELSE                                       # NOCHECK_LARGE
+CHECK_LARGE = 1
+.ENDIF                                      # NOCHECK_LARGE
+.ENDIF                                  # __ALPHA__
+.ENDIF                              # LARGE
+DESTL = L
+.ENDIF                          # NOLARGE
+
+DEST = $(DESTM)$(DESTL)
 
 # Check for option problems.
 
@@ -90,8 +136,9 @@ NON_VAX_CMPL = 1
 .ENDIF                              # VAXC_OR_FORCE_VAXC
 .ENDIF                          # __VAX__
 
-# Complain if warranted.  Otherwise, show destination directory.
-# Make the destination directory, if necessary.
+# Complain about any problems (and die) if warranted.  Otherwise, show
+# the destination directory.  Make the destination directory, if
+# necessary.
 
 .IFDEF UNK_DEST                 # UNK_DEST
 .FIRST
@@ -130,6 +177,21 @@ NON_VAX_CMPL = 1
 	@ write sys$output ""
 	if (f$search( "$(DEST).DIR;1") .eqs. "") then -
 	 create /directory [.$(DEST)]
+.IFDEF CHECK_LARGE                          # CHECK_LARGE
+        @ write sys$output ""
+        @ write sys$output "   Verifying large-file support..."
+        @ @CHECK_LARGE.COM $(DEST) large_ok
+        @ no_large = (f$trnlnm( "large_ok") .eqs. "")
+        @ if (no_large) then -
+           write sys$output -
+            "   Large-file support not available with this VMS/CRTL version."
+        @ if (no_large) then -
+           write sys$output "   Add ""/MACRO = NOLARGE=1""."
+        @ if (no_large) then -
+           I_WILL_DIE_NOW.  /$$$$INVALID$$$$
+        @ write sys$output "   Large-file support ok."
+        @ write sys$output ""
+.ENDIF                                      # CHECK_LARGE
 .ENDIF                                  # LARGE_VAX
 .ENDIF                              # NON_VAX_CMPL
 .ENDIF                          # UNK_DEST

@@ -104,6 +104,12 @@ globalvalue CLI$_COMMA;
 #define VT_MAX( a, b) (((a) < (b)) ? (b) : (a))
 
 /* Function flags, options */
+
+#if !defined( __VAX) && defined( _LARGEFILE)
+# define OPT_STR " (+large-file)"
+#else
+# define OPT_STR " (-large-file)"
+#endif
 			
 int automode = 0;       /* z option, automatic mode */
 int binmode = 0;        /* b option, binary mode */
@@ -242,7 +248,7 @@ void usage( int exit_sts)
     sprintf(buf, "###DEBUG: max_lines = %d", max_lines);
     one_line(buf, &this_line, max_lines);
 #endif
-    sprintf( buf, "VMSTAR %s (%s)", VERSION, __DATE__);
+    sprintf( buf, "VMSTAR %s (%s)%s", VERSION, __DATE__, OPT_STR);
     one_line( buf, &this_line, max_lines);
 #ifdef SYMLINKS
     one_line( "usage (UNIX-style): vmstar -[h|c|t|x][BbDdFfopsvwz] [params ...] [file [...]]", &this_line, max_lines);
@@ -263,7 +269,7 @@ void usage( int exit_sts)
     one_line( "  A|n      ALL, NONE      ALL: (CREAT, MODIF), NONE: (NOCREAT, NOMODIF).", &this_line, max_lines);
     one_line( "  (UNIX-style: \"c\" = NOCREAT, \"C\" = CREAT, \"m\" = NOMODIF, \"M\" = MODIF,", &this_line, max_lines);
     one_line( "               \"A\" = ALL, \"n\" = NONE.)", &this_line, max_lines);
-    one_line( " d        /DOTS           Archive names retain a trailing dot.", &this_line, max_lines);
+    one_line( " d        /DOTS           Archived names retain a trailing dot.", &this_line, max_lines);
     one_line( "                          (Default: Trim trailing dots: \"fred.\" -> \"fred\".)", &this_line, max_lines);
     one_line( "                          Extract literal dots (\"^.\") in directory name (ODS5).", &this_line, max_lines);
     one_line( "                          (Default: Convert dots in directory name to \"_\".)", &this_line, max_lines);
@@ -290,7 +296,7 @@ static void arg_check( void)
     {
         if (verbose > 0)
         {
-            fprintf( stderr, "VMSTAR %s (%s)", VERSION, __DATE__);
+            fprintf( stderr, "VMSTAR %s (%s)%s", VERSION, __DATE__, OPT_STR);
             exit( SS$_NORMAL);
         }
         else

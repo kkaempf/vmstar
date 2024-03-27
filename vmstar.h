@@ -53,6 +53,22 @@
 #define BADCHARS_ODS5   "*|:<>?\\\""
 #define TRANSLATE_ODS5  "__________"
 
+/* POSIX typeflag (our linkflag) values. */
+#define AREGTYPE '\0'           /* regular file */
+#define REGTYPE  '0'            /* regular file */
+#define LNKTYPE  '1'            /* link */
+#define SYMTYPE  '2'            /* reserved */
+#define CHRTYPE  '3'            /* character special */
+#define BLKTYPE  '4'            /* block special */
+#define DIRTYPE  '5'            /* directory */
+#define FIFOTYPE '6'            /* FIFO special */
+#define CONTTYPE '7'            /* reserved */
+
+#define XHDTYPE  'x'            /* Extended header referring to the
+                                     next file in the archive */
+#define XGLTYPE  'g'            /* Global extended header */
+
+
 struct tarhdr                   /* A tar header */
 {
     char title[NAMSIZE];        /*   0  Member name (if <= 100 c's).  (name) */
@@ -67,15 +83,14 @@ struct tarhdr                   /* A tar header */
 /*
  *  Posix header items:
  */
-/*  char magic[6];            *//* 257  Magic ID string ("ustar"?). */
-/*  char version[2];          *//* 263  Version. */
-/*  char uname[32];           *//* 265 */
-/*  char gname[32];           *//* 297 */
-/*  char devmajor[8];         *//* 329 */
-/*  char devminor[8];         *//* 337 */
-/*  char prefix[155];         *//* 345 */
-/**/
-    char dummy[255];            /* 257  Remainder.  (prefix) */
+    char magic[6];              /* 257  Magic ID string ("ustar\0"). */
+    char version[2];            /* 263  USTAR Version. */
+    char uname[32];             /* 265 */
+    char gname[32];             /* 297 */
+    char devmajor[8];           /* 329 */
+    char devminor[8];           /* 337 */
+    char prefix[155];           /* 345 */
+    char dummy[12];             /* 500  (Pad to 512 (record size).) */
 };
 
 /* GNU tar extract. */
@@ -93,24 +108,25 @@ struct tarhdr                   /* A tar header */
 /* Further link types may be defined later.  */
 
 /* Note that the standards committee allows only capital A through
-   capital Z for user-defined expansion.  This means that defining
-   something as, say '8' is a *bad* idea.  */
+ * capital Z for user-defined expansion.  This means that defining
+ * something as, say '8' is a *bad* idea.
+ */
 
-#define   LF_ACL         'A'  /* Solaris Access Control List. */
-#define   LF_DUMPDIR     'D'  /* GNU dump dir. */
-#define   LF_EXTATTR     'E'  /* Solaris Extended Attribute File. */
-#define   LF_META        'I'  /* Inode (metadata only, no file). */
-#define   LF_LONGLINK    'K'  /* Long linkname for next file. */
-#define   LF_LONGNAME    'L'  /* Long name for next file. */
-#define   LF_MULTIVOL    'M'  /* Continuation file (begun on other vol.). */
-#define   LF_NAMES       'N'  /* OLD GNU for names > 100 characters. */
-#define   LF_VMS         'P'  /* VMS attributes. */
-#define   LF_SPARSE      'S'  /* Sparse file descriptor(s). */
-#define   LF_VOLHDR      'V'  /* Tape/volume header.  (Ignore on extract.) */
-#define   LF_VU_XHDR     'X'  /* POSIX.1-2001 xtended (Sun VU version) */
+#define LF_ACL          'A'     /* Solaris Access Control List. */
+#define LF_DUMPDIR      'D'     /* GNU dump dir. */
+#define LF_EXTATTR      'E'     /* Solaris Extended Attribute File. */
+#define LF_META         'I'     /* Inode (metadata only, no file). */
+#define LF_LONGLINK     'K'     /* Long linkname for next file. */
+#define LF_LONGNAME     'L'     /* Long name for next file. */
+#define LF_MULTIVOL     'M'     /* Continuation file (begun on other vol.). */
+#define LF_NAMES        'N'     /* OLD GNU for names > 100 characters. */
+#define LF_VMS          'P'     /* VMS attributes. */
+#define LF_SPARSE       'S'     /* Sparse file descriptor(s). */
+#define LF_VOLHDR       'V'     /* Tape/volume header.  (Ignore on extract.) */
+#define LF_VU_XHDR      'X'     /* POSIX.1-2001 xtended (Sun VU version) */
 
-#define   LF_XHD         'x'  /* Extended header. */
-#define   LF_XGL         'g'  /* Global extended header. */
+#define LF_XHD          'x'     /* Extended header. */
+#define LF_XGL          'g'     /* Global extended header. */
 
 
 /* Common function prototypes. */

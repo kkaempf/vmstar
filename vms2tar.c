@@ -211,7 +211,7 @@ unsigned char *ptr;
         strncpy( header.chksum, "        ", 8); /* All blanks for chksum. */
         chksum = 0;
         for (ptr = (unsigned char *)&header;
-         ptr < (unsigned char *) &header.dummy[ 255];
+         ptr < (unsigned char *) &header.dummy[ 12];
          ptr++)
              chksum += *ptr;
         sprintf( header.chksum, "%06o", chksum);
@@ -758,17 +758,7 @@ int n;
 
 write_trailer( int fdout)
 {
-int i;
-    for (i=0; i < NAMSIZE; ++i)
-        header.title[i] = header.linkname[i] = '\0';
-    for (i=0; i < 255; ++i)
-        header.dummy[i] = '\0';
-    for (i=0; i < 12; ++i)
-        header.count[i] = header.time[i] = '\0';
-    for (i=0; i < 8; ++i)
-        header.protection[i] = header.uid[i] = header.gid[i] =
-            header.chksum[i] = '\0';
-    header.linkflag = '\0';
+    memset( &header, 0, 512);
     write_header(fdout);
     write_header(fdout);
 

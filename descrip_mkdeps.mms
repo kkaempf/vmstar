@@ -1,6 +1,8 @@
-#                                               3 January 2008.  SMS.
+# DESCRIP_MKDEPS.MMS
 #
-#    VMSTAR 4.0 for VMS - MMS Dependency Description File.
+#    VMSTAR 4.1 - MMS Dependency Description File.
+#
+#    Last revised:  2014-11-10
 #
 #    MMS /EXTENDED_SYNTAX description file to generate C source
 #    dependency files.  Unsightly errors result when /EXTENDED_SYNTAX

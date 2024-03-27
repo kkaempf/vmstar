@@ -1,3 +1,55 @@
+Mon Nov 24 2014  Steven Schweda <sms@antinode.info>
+
+        * V4.1.  Revised the builders to enable large-file support by
+          default on non-VAX systems (with a run-time check on Alpha,
+          using a new DCL script).  Added build options (MMS targets),
+          DASHV and SLASHV, to generate a "vmstar -v" or "vmstar
+          /verbose" report, respectively, using the local executable.
+          (BUILD_VMSTAR.COM, DESCRIP.MMS, DESCRIP_MKDEPS.MMS,
+          DESCRIP_SRC.MMS, check_large.com)
+
+        * Reduced some explicit loops to a memset() invocation.
+          (VMS2TAR.C)
+
+        * Added an option string to the version report to show whether
+          large-file support is enabled.  For example:
+                VMSTAR V4.1 (Nov 24 2014) (+large-file)
+                VMSTAR V4.1 (Nov 24 2014) (-large-file)
+          (VMSTAR_CMDLINE.C)
+
+Mon Nov 17 2014  Steven Schweda <sms@antinode.info>
+
+        * V4.0-3.  Unexpected "linkflag" (POSIX: "typeflag") values
+          caused data to be mishandled, triggering various spurious
+          error messages and extraction/listing failures.  The specific
+          reported problem involved a POSIX "global extended header"
+          (type: "g", title: "pax_global_header"), but others could
+          cause the same kinds of trouble.  Any archive member with an
+          unsupported type should now be ignored.  (TAR2VMS.C)
+
+        * When extracting, two different problems triggered the same
+          error message, "error setting protection on file", and in one
+          case the UNIX-like error status was misinterpreted as a
+          VMS-like status, causing a misleading explanatory message.
+          These messages should now be unambiguous, and the explanatory
+          messages correct.  (TAR2VMS.C)
+
+Wed Nov 05 2014  Steven Schweda <sms@antinode.info>
+
+        * V4.0-2.  The POSIX "prefix" field was ignored during
+          extraction, which typically caused loss of directory hierarchy
+          in extracted files.  The POSIX "typeflag" field was also
+          ignored, and this could cause a directory to be treated as a
+          (zero-length) regular file.  Other POSIX extensions to the
+          "tar" format may still be mishandled.  (TAR2VMS.C, VMS2TAR.C,
+          VMSTAR.H)
+
+        * Typography in -h (/HELP) text.  (VMSTAR_CMDLINE.C)
+
+Mon Apr 23 17:00:00 2012  Steven Schweda <sms@antinode.info>
+
+        * V4.0-1.  Corrected typography in AAAREADME.TXT.
+
 Tue Oct 18 14:00:00 2011  Steven Schweda <sms@antinode.info>
 
         * V4.0.  No functional changes since V3.5-pre12.
@@ -772,5 +824,4 @@ Thu Apr 28 07:07:?? 1994  Hunter Goatley  (goathunter@alpha.wku.edu)
 	handling.
 	Added some error handling in tarfile write operations.
 	Probably millions of bugs introduced... sorry.
-
 
