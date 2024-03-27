@@ -1,3 +1,7 @@
+Tue Oct 18 14:00:00 2011  Steven Schweda <sms@antinode.info>
+
+        * V4.0.  No functional changes since V3.5-pre12.
+
 Fri Dec 31 16:00:00 2010  Steven Schweda <sms@antinode.info>
 
         * V3.5-pre12.  Changed to use actual archived file permissions
@@ -151,28 +155,28 @@ Tue Feb 24 17:02:32 2009  Steven Schweda <sms@antinode.info>
 
 Wed Nov 05 13:31:05 2008  Steven Schweda <sms@antinode.info>
 
-	* V3.5-pre3.  Changed error handling in TAR2VMS.C to continue
+        * V3.5-pre3.  Changed error handling in TAR2VMS.C to continue
         processing after an output error (for example, a too-long name
         on an ODS2 disk).
 
 Thu Jan 03 15:03:11 2007  Steven Schweda <sms@antinode.org>
 
-	* V3.5-pre2.  New MMS/MMK builders with automatic dependency
-	generation.  Minor source changes to accomodate old DEC C
+        * V3.5-pre2.  New MMS/MMK builders with automatic dependency
+        generation.  Minor source changes to accomodate old DEC C
         compilers.  Large-file support must be requested explicitly when
         building.  (See comments in DESCRIP.MMS.)
 
 Thu Jun 07 02:35:03 2007  Steven Schweda <sms@antinode.org>
 
-	* V3.5-pre1.  Changed to handle some ODS5 cases better,
-	including symbolic links and GNU-tar-like extensions for long
-	file names.  Added /SYMLINKS ("s") to enable symlinks to be
-	extracted as real symlinks.  Added large file support, where the
-	C RTL has it, including GNU-tar-like binary size (instead of
-	octal) for files bigger than 8GB.  Separated "b" (block_factor)
-	and "B" (binary) options, and changed UNIX-style command-line
-	parsing to allow "b" and "f" together (and "f" no longer needs
-	to be last).  Could have broken any number of things.
+        * V3.5-pre1.  Changed to handle some ODS5 cases better,
+        including symbolic links and GNU-tar-like extensions for long
+        file names.  Added /SYMLINKS ("s") to enable symlinks to be
+        extracted as real symlinks.  Added large file support, where the
+        C RTL has it, including GNU-tar-like binary size (instead of
+        octal) for files bigger than 8GB.  Separated "b" (block_factor)
+        and "B" (binary) options, and changed UNIX-style command-line
+        parsing to allow "b" and "f" together (and "f" no longer needs
+        to be last).  Could have broken any number of things.
 
 Thu Nov 29 22:16:20 2001  Hunter Goatley <goathunter@goatley.com>
 

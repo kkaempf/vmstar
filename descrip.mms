@@ -1,6 +1,6 @@
 #                                               24 February 2009.  SMS.
 #
-#    VMSTAR 3.5 for VMS - MMS (or MMK) Description File.
+#    VMSTAR 4.0 for VMS - MMS (or MMK) Description File.
 #
 # Usage:
 #

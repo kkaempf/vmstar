@@ -1,6 +1,6 @@
 #                                               3 January 2008.  SMS.
 #
-#    VMSTAR 3.5 for VMS - MMS Dependency Description File.
+#    VMSTAR 4.0 for VMS - MMS Dependency Description File.
 #
 #    MMS /EXTENDED_SYNTAX description file to generate C source
 #    dependency files.  Unsightly errors result when /EXTENDED_SYNTAX

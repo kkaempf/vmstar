@@ -17,12 +17,12 @@
   by UnZip (and Zip, possibly), not least among them the utime() function.
   Read on for details...
 
-        30-Dec-2010     Steven Schweda <sms@antinode.info>
-                        Added SET_MODE and SET_PROT actions.
-                        Changed to prototype function declarations.
+	30-Dec-2010	Steven Schweda <sms@antinode.info>
+			Added SET_MODE and SET_PROT actions.
+			Changed to prototype function declarations.
 
-	 7-Apr-2010     Steven Schweda <sms@antinode.info>
-                        Changed to use NAML instead of NAM where
+	 7-Apr-2010	Steven Schweda <sms@antinode.info>
+			Changed to use NAML instead of NAM where
 			available.
 
 	 8-May-1998	Richard Levitte <richard@levitte.org>
