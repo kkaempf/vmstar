@@ -1,5 +1,5 @@
 #define module_name	VMSMUNCH
-#define module_version	"V1.4"
+#define module_version	"V1.5"
 /*---------------------------------------------------------------------------
 
   VMSmunch.c                    version 1.3-4                   28 Apr 1992
@@ -16,6 +16,13 @@
   power of Joe's original routine at the disposal of various routines used
   by UnZip (and Zip, possibly), not least among them the utime() function.
   Read on for details...
+
+        28-Dec-2020     Steven Schweda <sms@antinode.info>
+                        Removed bit fields from SET_MODE code, to
+                        accommodate lame compiler (Compaq C V6.4-005 on
+                        OpenVMS VAX V7.3).  Symptom was %SYSTEM-F-ACCVIO
+                        at run time when setting file (directory)
+                        protections.  (No great loss, if any.)
 
 	30-Dec-2010	Steven Schweda <sms@antinode.info>
 			Added SET_MODE and SET_PROT actions.
@@ -90,7 +97,7 @@
                     is always inhibited.
 
      SET_PROT       Set the file protection according to a VMS-style
-                    protection value (short int).
+                    protection value (unsigned short).
 
   ---------------------------------------------------------------------------
 
@@ -255,17 +262,9 @@ int VMSmunch( char *filename, int action, void *ptr)
     static int Rdate[ 2];
     static int Edate[ 2];
     static int Bdate[ 2];
-    static short int revisions;
+    static short revisions;
     static unsigned long uic;
-    static union {
-      unsigned short int value;
-      struct {
-        unsigned system : 4;            /* LS bits. */
-        unsigned owner :  4;
-        unsigned group :  4;
-        unsigned world :  4;            /* MS bits. */
-      } bits;
-    } prot;
+    static unsigned short prot;         /* W[4], G[4], O[ 4], S[ 4]. */
     static short mode;                  /* UNIX-format mode value. */
 
 
@@ -303,8 +302,8 @@ int VMSmunch( char *filename, int action, void *ptr)
       {0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0};
     static struct dsc$descriptor_s string =
       {0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0};
-    static short int DevChan;
-    static short int iosb[4];
+    static short DevChan;
+    static short iosb[4];
 
     static long int i,status;
 
@@ -482,15 +481,16 @@ int VMSmunch( char *filename, int action, void *ptr)
                */
               is_dir = ((uchar.lword& FCH$M_DIRECTORY) != 0);
               mode = *(mode_t *)ptr;
-              prot.bits.world = prot_of_perm[ is_dir][(mode>> 0)& 7];
-              prot.bits.group = prot_of_perm[ is_dir][(mode>> 3)& 7];
-              prot.bits.owner = prot_of_perm[ is_dir][(mode>> 6)& 7];
-              prot.bits.system = prot.bits.owner;
+              prot =
+               prot_of_perm[ is_dir][(mode>> 0)& 7]<< 12 |      /* World. */
+               prot_of_perm[ is_dir][(mode>> 3)& 7]<<  8 |      /* Group. */
+               prot_of_perm[ is_dir][(mode>> 6)& 7]<<  4 |      /* Owner. */
+               prot_of_perm[ is_dir][(mode>> 6)& 7]<<  0;       /* System. */
               break;
 
           case SET_PROT:
               /* Set file protection from a VMS protection value. */
-              prot.value = *(unsigned short int *)ptr;
+              prot = *(unsigned short *)ptr;
               break;
 
           default:

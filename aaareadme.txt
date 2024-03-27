@@ -1,4 +1,4 @@
-            VMSTAR V4.2, 2015-01-15
+            VMSTAR V4.3, 2020-12-29
             =======================
 
 ------------------------------------------------------------------------
@@ -46,13 +46,13 @@ helpful, and are appreciated.
       Usage Basics
       ------------
 
-   VMSTAR offers both UNIX-style and VMS-style command line interfaces.
+   VMSTAR offers both UNIX-style and VMS-style command-line interfaces.
 Running VMSTAR with no options or arguments provides brief "Usage"
 notes:
 
-VMSTAR V4.2 (Jan 13 2015)
-Usage (UNIX-style): vmstar -[h|c|t|x][BbDdFfopsvwz] [params ...] [file [...]]
-Usage (VMS-style):  VMSTAR [options] tarfile [file [, file [...]]]
+VMSTAR V4.3 (Dec 23 2020) (-large-file)
+usage (UNIX-style): vmstar -[h|c|t|x][BbDdFfopsvwz] [params ...] [file [...]]
+usage (VMS-style):  VMSTAR [options] tarfile [file [, file [...]]]
  Options (UNIX-style, VMS-style):
  h        /HELP           Print this text and exit.  (Other options ignored.)
  c        /CREATE         Create a tarfile.
@@ -131,10 +131,10 @@ the archive. Using an absolute VMS directory specification in the file
 specification will result in absolute paths in the archive.  For
 example:
 
-      $ vmstx -cfv alphal_rel.tar [.alphal].exe       ! Relative.
+      $ vmstar -cfv alphal_rel.tar [.alphal].exe        ! Relative.
       Oct 28 23:04:13 2010    77312 ALPHAL/VMSTAR.EXE
 
-      $ vmstar -cfv html_abs.tar [html]robots.txt     ! Absolute.
+      $ vmstar -cfv html_abs.tar [html]robots.txt       ! Absolute.
       Nov 19 13:52:11 2001      914 /html/robots.txt
 
    A directory specification is considered absolute if it includes a
@@ -150,7 +150,7 @@ using "chroot" on a UNIX system).  For example:
       $ here_root = f$environment( "default") - "]"+ ".]"
       $ define /trans = conc here_root 'here_root'
       $ set default here_root:[000000]
-      $ vmstx -cfv alphal_abs.tar [alphal].exe        ! Absolute.
+      $ vmstar -cfv alphal_abs.tar [alphal].exe        	! Absolute.
       Oct 28 23:04:13 2010    77312 /ALPHAL/VMSTAR.EXE
 
    Using absolute paths in a "tar" archive is generally unwise, because

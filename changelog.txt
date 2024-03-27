@@ -1,3 +1,41 @@
+Tue Dec 29 2020  Steven Schweda <sms@antinode.info>
+
+        * V4.3.  Minor documentation fixes.  (AAAREADME.TXT)
+
+        * When large-file support was not enabled (typically on VAX), if
+          an I/O error occurred while extracting an archive member,
+          VMSTAR would skip all remaining archive members, not only the
+          one which had the problem.  The example test case involved a
+          $CREATE failure caused by a file name which was too long for
+          an ODS2 destination, but any I/O error could cause the
+          misbehavior.  (TAR2VMS.C)
+
+        * When an I/O error occurred while extracting an archive member,
+          VMSTAR could attempt to set date-times and protection on the
+          file which was not successfully extracted, causing a redundant
+          error message (such as "error setting protection (chmod)") to
+          be emitted after the original I/O error message.  (TAR2VMS.C)
+
+        * When help output was redirected to a file (using a command
+          like "pipe vmstar -h 2> help.txt"), and the help text was
+          longer than the terminal page height, VMSTAR would hang,
+          waiting for the user to respond to the (redirected, hence
+          invisible) prompt, "Press return for more...".
+          (VMSTAR_CMDLINE.C)
+
+        * The use of bit fields in the code which set directory
+          protections apparently caused a fatal run-time error on VAX
+          (%SYSTEM-F-ACCVIO) when built using "Compaq C V6.4-005 on
+          OpenVMS VAX V7.3" with /OPTIMIZE (the default).  Equivalent
+          (but less trendy) code seems to have no such trouble.
+          (VMSMUNCH.C)
+
+        * Added MMS macro TRC to the builders, for LINK /TRACEBACK
+          without /DEBUG.  (DESCRIP_SRC.MMS)
+
+        * Permuted some data structures to naturally-aligned order. 
+          (TAR2VMS.C)
+
 Tue Jan 15 2015  Steven Schweda <sms@antinode.info>
 
         * V4.2.  An absolute path could be archived in some cases when a
@@ -11,7 +49,7 @@ Tue Jan 15 2015  Steven Schweda <sms@antinode.info>
 
         * The change made in V3.5-pre10 to extend the /ODS2 ("o") option
           to archive creation worked only for the UNIX-style "o" option,
-          not for the VMS-style /ODS2 option ("%CLI-W-CONFLICT"). 
+          not for the VMS-style /ODS2 option ("%CLI-W-CONFLICT").
           Thanks (again) to Corinne Robin for the bug report.
           (VMSTAR_CLD.CLD)
 
@@ -228,7 +266,7 @@ Wed Nov 05 13:31:05 2008  Steven Schweda <sms@antinode.info>
         processing after an output error (for example, a too-long name
         on an ODS2 disk).
 
-Thu Jan 03 15:03:11 2007  Steven Schweda <sms@antinode.org>
+Thu Jan 03 15:03:11 2008  Steven Schweda <sms@antinode.org>
 
         * V3.5-pre2.  New MMS/MMK builders with automatic dependency
         generation.  Minor source changes to accomodate old DEC C

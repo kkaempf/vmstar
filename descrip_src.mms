@@ -1,8 +1,8 @@
 # DESCRIP_SRC.MMS
 #
-#    VMSTAR 4.1 - MMS (or MMK) Source Description File.
+#    VMSTAR 4.3 - MMS (or MMK) Source Description File.
 #
-#    Last revised:  2014-11-24
+#    Last revised:  2020-12-23
 #
 
 # This description file is included by other description files.  It is
@@ -203,7 +203,11 @@ CFLAGS_DBG = /debug /nooptimize
 LINKFLAGS_DBG = /debug /traceback
 .ELSE                           # DBG
 CFLAGS_DBG =
+.IFDEF TRC                          # TRC
+LINKFLAGS_DBG = /traceback
+.ELSE                               # TRC
 LINKFLAGS_DBG = /notraceback
+.ENDIF                              # TRC
 .ENDIF                          # DBG
 
 # Large-file options.

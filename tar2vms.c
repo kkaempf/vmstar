@@ -1,5 +1,5 @@
 #define module_name	TAR2VMS
-#define module_version  "V2.2"
+#define module_version  "V2.3"
 /*
  *	TAR2VMS.C - Handles the extract and list functionality of VMSTAR.
  */
@@ -82,8 +82,8 @@ char vmscreation[ ABSASCTIM_MAX+ 1];
 typedef struct dir_ll_t
 {
     struct dir_ll_t *next;
-    mode_t mode;
     char *name;
+    mode_t mode;
 } dir_ll_t;
 
 dir_ll_t *dir_ll_head = NULL;
@@ -105,9 +105,9 @@ dir_ll_t *dir_ll_p;
 typedef struct symlink_ll_t
 {
     struct symlink_ll_t *next;
-    mode_t mode;
     char *name;
     char *text;
+    mode_t mode;
 } symlink_ll_t;
 
 symlink_ll_t *symlink_ll_head = NULL;
@@ -236,6 +236,15 @@ int data_read( char *buffer, vt_size_t bytes_to_read)
  * Commonly used when listing.  Used for unrecognized types during
  * extraction.
  */
+
+/* 2020-12-23 SMS. Without _LARGEFILE (typically on VAX), vt_size_t is
+ * unsigned int, and a negative value of the argument here was seen as
+ * positive, causing tarskip() to skip the whole of the remaining
+ * archive, emit a spurious error, "EOF hit while skipping.".  (And any
+ * archive members after the one with the problem were not processed.)
+ * The caller is responsible for avoiding this situation.
+ */
+
 int tarskip( vt_size_t bytes)
 {
     size_t i = 0;
@@ -480,7 +489,22 @@ int copyfile( char *outfile, vt_size_t nbytes)
             errno = EVMSERR;
             vaxc$errno = sts;
             fprintf( stderr, " %s\n", strerror( errno));
-            tarskip(bytes - inbytes);
+
+            /* Skip the remainder of the problem archive member. */
+
+            /* 2020-12-23 SMS. Without _LARGEFILE (typically on VAX),
+             * vt_size_t is unsigned int, and a negative value of the
+             * tarskip() argument was seen as positive, causing
+             * tarskip() to skip the whole of the remaining archive,
+             * emit a spurious error, "EOF hit while skipping.", and
+             * fail to process any archive members after the one with
+             * the problem.
+             * Added a (valid) comparison here to avoid the problem.
+             */
+#ifndef _LARGEFILE
+            if (bytes > inbytes)
+#endif /* ndef _LARGEFILE */
+                tarskip( bytes- inbytes);
         }
         else
         {
@@ -538,7 +562,13 @@ int copyfile( char *outfile, vt_size_t nbytes)
                     errno = EVMSERR;
                     vaxc$errno = sts;
                     fprintf( stderr, " %s\n", strerror( errno));
-                    tarskip(bytes - inbytes);
+
+                    /* 2020-12-23 SMS.  See note above. */
+                    /* Skip the remainder of the problem archive member. */
+#ifndef _LARGEFILE
+                    if (bytes > inbytes)
+#endif /* ndef _LARGEFILE */
+                        tarskip( bytes- inbytes);
                 }
 
                 if (inbytes == 0 && bytes != 0) {
@@ -554,7 +584,7 @@ int copyfile( char *outfile, vt_size_t nbytes)
             }
         }
 
-/* 2008-11-05  SMS.
+/* 2008-11-05 SMS.
  * Disabled this message and exit.  Output errors should not be fatal,
  * and the error message has already been put out.
  */
@@ -579,30 +609,33 @@ int copyfile( char *outfile, vt_size_t nbytes)
             fprintf(stderr, "                         --> %s\n",linkname);
     }
 
-    /* For a non-symlink file, set the permission/protection. */
+    /* For a (successful) non-symlink file, set the permission/protection. */
 
-#ifdef SYMLINKS
-    if ((linkflag != LF_LINK) && (linkflag != LF_SYMLINK))
-#endif /* def SYMLINKS */
+    if (s >= 0)
     {
-        sts = chmod( outfile, (mode& 0777));
-        if (sts < 0)
+#ifdef SYMLINKS
+        if ((linkflag != LF_LINK) && (linkflag != LF_SYMLINK))
+#endif /* def SYMLINKS */
         {
-            fprintf( stderr,
-             "tar: error setting protection (chmod) on file %s \n",
-             outfile);
-            fprintf( stderr, " %s\n", strerror( errno));
+            sts = chmod( outfile, (mode& 0777));
+            if (sts < 0)
+            {
+                fprintf( stderr,
+                 "tar: error setting protection (chmod) on file %s \n",
+                 outfile);
+                fprintf( stderr, " %s\n", strerror( errno));
+            }
         }
-    }
 
-    vtb.actime = 0;
-    vtb.modtime = 0;
-    if (date_policy & DP_MODIFICATION)
-        vtb.actime = vmscreation;
-    if (date_policy & DP_CREATION)
-        vtb.modtime = vmscreation;
-    VMSmunch(outfile, SET_TIMES, &vtb);
-    VMSmunch(outfile, SET_EXACT_SIZE, &nbytes);
+        vtb.actime = 0;
+        vtb.modtime = 0;
+        if (date_policy & DP_MODIFICATION)
+            vtb.actime = vmscreation;
+        if (date_policy & DP_CREATION)
+            vtb.modtime = vmscreation;
+        VMSmunch(outfile, SET_TIMES, &vtb);
+        VMSmunch(outfile, SET_EXACT_SIZE, &nbytes);
+    }
     return 0;
 }
 
@@ -651,7 +684,7 @@ void store_pathname()
                *(cp+ len+ 1) = '\0';            /* NUL-terminate. */
             }
         }
-    }    
+    }
 }
 
 

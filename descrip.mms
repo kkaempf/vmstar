@@ -13,9 +13,9 @@
 #    "CCOPTS=xxx"   Compile with CC options xxx.  For example:
 #                   "CCOPTS=/ARCH=HOST"
 #
-#    DBG=1          Compile with /DEBUG /NOOPTIMIZE.
-#                   Link with /DEBUG /TRACEBACK.
-#                   (Default is /NOTRACEBACK.)
+#    DBG=1          Compile /DEBUG /NOOPTIMIZE.  Link /DEBUG /TRACEBACK.
+#    TRC=1          Default is /NOTRACEBACK, but TRC=1 enables link with
+#                   /TRACEBACK without compiling for debug.
 #
 #    LARGE=1        Enable/disable large-file (>2GB) support.  Always
 #    NOLARGE=1      disabled on VAX.  Enabled by default on Alpha and

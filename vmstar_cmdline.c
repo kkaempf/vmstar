@@ -1,5 +1,5 @@
 #define module_name VMSTAR_CMDLINE
-#define module_ident "02-009"
+#define module_ident "02-010"
 /*
 **
 **  Facility:	VMSTAR
@@ -15,6 +15,10 @@
 **		returned to VMSTAR.
 **
 **  Modified by:
+**
+**      02-010          Steven Schweda          23-DEC-2020 21:00
+**              Changed to suppress the "Press return for more..."
+**              prompt in help when stderr is not a terminal.
 **
 **      02-009          Steven Schweda          11-NOV-2010 22:13
 **              Added /SYMLINKS, /UNDERDOT.
@@ -71,6 +75,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <clidef.h>
 #include <climsgdef.h>
@@ -205,10 +210,16 @@ static
 one_line(char *text, int *this_line, int max_lines)
 {
     static int eof = 0;
+    static int tty = -16;       /* Pause output only for a terminal. */
+
+    if (tty == -16)
+    {
+        tty = isatty( fileno( stderr));
+    }
 
     if (eof == 0)
     {
-        if ((*this_line)++ == max_lines-1)
+        if ((tty > 0) && ((*this_line)++ == max_lines-1))
         {
             fprintf( stderr, "Press return for more...");
             if (getchar() == EOF)
