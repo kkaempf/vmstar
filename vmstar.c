@@ -88,8 +88,6 @@
 
 #ifdef __DECC
 #pragma module module_name module_version
-#else
-#module module_name module_version
 #endif
 
 #include <ctype.h>
@@ -141,9 +139,10 @@ register char *cp;
     cp = strchr(temp, ':');    /* split into device and directory */
     /* work out if the device is ODS-5 */
     if (!ods2) {
+	long arg1 = DVI$_ACPTYPE;
         curdevdesc.dsc$a_pointer = temp;
         curdevdesc.dsc$w_length = cp - temp + 1;
-        lib$getdvi(&DVI$_ACPTYPE, 0, &curdevdesc, &acp_type, 0, 0);
+        lib$getdvi(&arg1, 0, &curdevdesc, &acp_type, 0, 0);
         }
     else
         acp_type = DVI$C_ACP_F11V2;

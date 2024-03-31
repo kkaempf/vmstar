@@ -119,8 +119,6 @@
 
 #ifdef __DECC
 #pragma module module_name module_version
-#else
-#module module_name module_version
 #endif
 
 /*****************************/
@@ -267,15 +265,7 @@ int VMSmunch( char *filename, int action, void *ptr)
     static unsigned short prot;         /* W[4], G[4], O[ 4], S[ 4]. */
     static short mode;                  /* UNIX-format mode value. */
 
-
-/* On VAX, define Goofy VAX Type-Cast to obviate /standard = vaxc.
- * Otherwise, lame (ATR) system headers on VAX cause compiler warnings.
- */
-#ifdef __VAX
-# define GVTC (unsigned int)
-#else
-# define GVTC
-#endif
+#define GVTC
 
     static struct atrdef Atr[] = {
       {ATR$S_RECATTR, ATR$C_RECATTR, GVTC &Fat},    /* Record attributes */

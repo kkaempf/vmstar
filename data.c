@@ -6,8 +6,6 @@
 
 #ifdef __DECC
 #pragma module module_name module_version
-#else
-#module module_name module_version
 #endif
 
 #include "vmstarp.h"

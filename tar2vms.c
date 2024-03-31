@@ -6,8 +6,6 @@
 
 #ifdef __DECC
 #pragma module module_name module_version
-#else
-#module module_name module_version
 #endif
 
 #include <stdio.h>
@@ -461,7 +459,7 @@ int copyfile( char *outfile, vt_size_t nbytes)
 
             fil_fab.fab$b_rfm = FAB$C_STMLF;
             fil_fab.fab$b_rat = FAB$M_CR;
-            fil_fab.fab$l_xab = &fil_xab;
+            fil_fab.fab$l_xab = (struct xabdef *)&fil_xab;
 
             fil_xab = cc$rms_xabfhc;
             fil_xab.xab$w_lrl = 32767;
@@ -470,7 +468,7 @@ int copyfile( char *outfile, vt_size_t nbytes)
         sts = sys$create( &fil_fab);
         if ((sts& STS$M_SUCCESS) != STS$K_SUCCESS)
         {
-            fprintf( stderr, "tar: error creating ($CREATE) %s \n", outfile);
+            fprintf( stderr, "tar: error %08x creating ($CREATE) %s \n", sts, outfile);
             s = -1;
         }
         else
@@ -488,7 +486,8 @@ int copyfile( char *outfile, vt_size_t nbytes)
         {
             errno = EVMSERR;
             vaxc$errno = sts;
-            fprintf( stderr, " %s\n", strerror( errno));
+/*            fprintf( stderr, "error: %s\n", strerror( errno));*/
+            fprintf( stderr, "error: %d\n", errno);
 
             /* Skip the remainder of the problem archive member. */
 
@@ -1148,10 +1147,16 @@ unsigned int str_case_match_wild( struct dsc$descriptor *candidate,
         exit( vaxc$errno);
     }
 
-    for (i = 0 ; i < candidate->dsc$w_length; i++)
-        local_candidate.dsc$a_pointer[i] = toupper(candidate->dsc$a_pointer[i]);
-    for (i = 0 ; i < pattern->dsc$w_length; i++)
-        local_pattern.dsc$a_pointer[i] = toupper(pattern->dsc$a_pointer[i]);
+    for (i = 0 ; i < candidate->dsc$w_length; i++) {
+	char *ptr = candidate->dsc$a_pointer;
+	char *lptr = local_candidate.dsc$a_pointer;
+        lptr[i] = toupper(ptr[i]);
+    }
+    for (i = 0 ; i < pattern->dsc$w_length; i++) {
+	char *ptr = pattern->dsc$a_pointer;
+	char *lptr = local_pattern.dsc$a_pointer;
+        lptr[i] = toupper(ptr[i]);
+    }
     sts = str$match_wild( &local_candidate, &local_pattern);
     free( local_candidate.dsc$a_pointer);
     free( local_pattern.dsc$a_pointer);

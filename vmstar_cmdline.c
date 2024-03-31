@@ -67,8 +67,6 @@
 
 #ifdef __DECC
 #pragma module module_name module_ident
-#else
-#module module_name module_ident
 #endif
 
 #include <errno.h>
@@ -132,7 +130,7 @@ int the_wait = 0;       /* w option, prompt */
 
 char tarfile[ T_NAM_LEN+ 1];
 struct dsc$descriptor_s curdevdesc = { 0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0 };
-unsigned int acp_type; /* Destination disk supports EFS/ODS5 */
+unsigned long acp_type; /* Destination disk supports EFS/ODS5 */
 
 unsigned int date_policy = DP_BOTH;     /* /DATE_POLICY ("D") value. */
 int force = 0;                          /* /FORCE ("F") value. */
@@ -193,11 +191,7 @@ $DESCRIPTOR(cli_yyz,		"YYZ");
 
 $DESCRIPTOR(vmstar_command, "vmstar ");
 
-#ifdef __DECC
 extern void *vmstar_clitables;
-#else
-globalref void *vmstar_clitables;
-#endif
 
 /* extern unsigned int LIB$GET_INPUT(void), LIB$SIG_TO_RET(void); */
 
@@ -244,14 +238,15 @@ void usage( int exit_sts)
     $DESCRIPTOR(dev_descr,"SYS$OUTPUT");
     unsigned int status;
     int this_line = 0;
+    long arg1 = DVI$_DEVDEPEND;
 #if 1 || (!defined(__VAXC) && !defined(VAXC))
     union ttdef ttydef;
 #else
     variant_union ttdef ttydef;
 #endif
-#define max_lines ttydef.tt$v_page
+#define max_lines ttydef.tt$r_ttdef_bits0.tt$v_page
 
-    if (((status = lib$getdvi(&DVI$_DEVDEPEND,0,&dev_descr,&ttydef,0,0))
+    if (((status = lib$getdvi(&arg1,0,&dev_descr,(long *)&ttydef,0,0))
 	 & 1) == 0)
 	max_lines = 24;
 
@@ -1041,4 +1036,3 @@ main( int argc, char **argv)
     return vmstar_cmdline(&argc, &argv);
 }
 #endif /* TEST */
-

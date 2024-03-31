@@ -6,8 +6,6 @@
 
 #ifdef __DECC
 #pragma module module_name module_version
-#else
-#module module_name module_version
 #endif
 
 #include "vmstar_cmdline.h"
@@ -1103,6 +1101,7 @@ void vms2tar( int argc, char **argv)
         }
         else
         {
+	    long arg1 = DVI$_ACPTYPE;
             /* Remember the existence of an explicit device name. */
             dev_len = 1;
 
@@ -1121,7 +1120,7 @@ void vms2tar( int argc, char **argv)
              */
             curdevdesc.dsc$a_pointer = string;
             curdevdesc.dsc$w_length = cp - string + 1;
-            lib$getdvi(&DVI$_ACPTYPE, 0, &curdevdesc, &acp_type, 0, 0);
+            lib$getdvi(&arg1, 0, &curdevdesc, &acp_type, 0, 0);
                                     /* update device EFS/ODS5 status */
         }
 
@@ -1424,7 +1423,7 @@ int check_text;
     myfab.fab$b_rfm = vmsrfm;
 
     myxab = cc$rms_xabfhc;
-    myfab.fab$l_xab = (char*)&myxab;
+    myfab.fab$l_xab = (struct xabdef *)&myxab;
 
     rms_status = sys$open(&myfab);
     if (rms_status & 1)
@@ -1580,7 +1579,7 @@ vt_size_t TotalBytes;
     myfab.fab$b_rfm = vmsrfm;
 
     myxab = cc$rms_xabfhc;
-    myfab.fab$l_xab = (char*)&myxab;
+    myfab.fab$l_xab = (struct xabdef *)&myxab;
 
     rms_status = sys$open(&myfab);
     if (rms_status & 1)
@@ -1637,4 +1636,4 @@ vt_size_t TotalBytes;
     return TotalBytes;
 }
 #endif /* EXPERIMENT */
-        
+

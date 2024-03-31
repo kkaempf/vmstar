@@ -38,7 +38,7 @@ extern int the_wait;    /* w option, prompt */
 extern char tarfile[ T_NAM_LEN+ 1];     /* Tarfile name  */
 
 extern struct dsc$descriptor_s curdevdesc;
-extern unsigned int acp_type;   /* Destination disk supports EFS/ODS5 */
+extern unsigned long acp_type;   /* Destination disk supports EFS/ODS5 */
 
 extern unsigned int date_policy;        /* /DATE_POLICY ("D") value. */
 extern int force;                       /* /FORCE ("F") value. */

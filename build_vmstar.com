@@ -249,7 +249,7 @@ $         if (HAVE_DECC_VAX)
 $         then
 $             CCOPTS_INT = "/vaxc"
 $         endif
-$         dest = "''dest'V"
+$         dest = "''dest'"
 $         cmpl = "VAC C"
 $         opts = "''opts', SYS$DISK:[.''dest']VAXCSHR.OPT /OPTIONS"
 $     endif
@@ -427,7 +427,7 @@ $         obj = f$edit( f$element( element, " ", objs), "TRIM")
 $         if (obj .eqs. "") then goto cmplloop_end
 $         src = f$element( 0, ".", f$element( 1, "]", obj))+ ".C"
 $         tmp = f$verify( 1)    ! Turn echo on.
-$         cc /define = ('defs') /object = 'obj' 'src'
+$         gcc /define = ('defs') /object = 'obj' 'src'
 $         tmp = f$verify( 0)    ! Turn echo off.
 $         element = element+ 1
 $     goto cmplloop
